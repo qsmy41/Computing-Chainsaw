@@ -1,0 +1,105 @@
+\documentclass[twocolumn,landscape,10pt]{article}
+\usepackage[thinc]{esdiff} % for typesettign derivatives
+\usepackage{amsthm} % provides an enhanced version of LaTex's \newtheorem command
+\usepackage{mdframed} % framed environments that can split at page boundaries
+\usepackage{enumitem} % bulletin points or other means of listing things
+\usepackage{amssymb} % for AMS symbols
+\usepackage{amsmath} % so as to use align
+\usepackage{latexsym} % so as to use symbols like \leadsto
+\usepackage{mathrsfs} % for using mathscr for char like operators
+\usepackage{commath} % for using norm symbol
+\usepackage{mathtools} % for using environments like dcases
+\usepackage{authblk} % for writing affiliations
+\usepackage{graphicx} % for importing images
+\graphicspath{{./images/}} % for the path to images, also always put label behind captions
+\usepackage{textcomp} % for using degree symbol
+\usepackage{hyperref} % for clickable link in the pdf & customizable reference text
+\usepackage[all]{hypcap} % for clickable link to images instead of caption
+\usepackage[margin=1in]{geometry} % default is 1.5in
+% \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
+\usepackage[title]{appendix} % for attaching appendix
+\allowdisplaybreaks % allow page breaking in display maths, like align
+% allow for more advanced table layout
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+% for adjusting caption settings
+\usepackage{caption}
+\captionsetup[table]{skip=10pt}
+
+\theoremstyle{definition}
+\mdfdefinestyle{defEnv}{%
+  hidealllines=false,
+  nobreak=true,
+  innertopmargin=-1ex,
+}
+
+% The following is for writing block of code
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+% setting of the thickness of the 4 lines of box
+\setlength{\fboxrule}{2pt}
+
+% Use the following to change code language and related settings
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\pagestyle{headings}
+\author{Lectured by Azalea Raad and Alastair Donaldson}
+\title{The Theory \& Practice of Concurrent Programming}
+\affil{Typed by Aris Zhu Yi Qing}
+\begin{document}
+\maketitle
+
+\section{Synchronisation Paradigms}
+
+\subsection{Properties in Asynchronous computation}
+
+\begin{enumerate}
+    \item Safety
+        \begin{itemize}
+            \item Nothing bad happens ever
+            \item If it is violated, it is done by a finite computation
+        \end{itemize} 
+    \item Liveness
+        \begin{itemize}
+            \item Something good happens eventually
+            \item Cannot be violated by a finite computation
+        \end{itemize} 
+\end{enumerate} 
+
+\subsection{Problems in Asynchronous computation}
+
+\begin{enumerate}
+    \item Mutual Exclusion (Safety)
+        \begin{itemize}
+            \item \textbf{cannot} be solved by transient communication or
+                interrupts
+            \item \textbf{can} be solved by shared variables that can be
+                read or written
+        \end{itemize} 
+    \item No Deadlock (Liveness)
+\end{enumerate} 
+
+
+
+\end{document}
