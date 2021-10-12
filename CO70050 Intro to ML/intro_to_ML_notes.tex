@@ -1,0 +1,147 @@
+\documentclass[twocolumn,landscape,10pt]{article}
+\usepackage[thinc]{esdiff} % for typesettign derivatives
+\usepackage{amsthm} % provides an enhanced version of LaTex's \newtheorem command
+\usepackage{mdframed} % framed environments that can split at page boundaries
+\usepackage{enumitem} % bulletin points or other means of listing things
+\usepackage{amssymb} % for AMS symbols
+\usepackage{amsmath} % so as to use align
+\usepackage{latexsym} % so as to use symbols like \leadsto
+\usepackage{mathrsfs} % for using mathscr for char like operators
+\usepackage{commath} % for using norm symbol
+\usepackage{mathtools} % for using environments like dcases
+\usepackage{authblk} % for writing affiliations
+\usepackage{graphicx} % for importing images
+\graphicspath{{./images/}} % for the path to images, also always put label behind captions
+\usepackage{textcomp} % for using degree symbol
+\usepackage{hyperref} % for clickable link in the pdf & customizable reference text
+\usepackage[all]{hypcap} % for clickable link to images instead of caption
+\usepackage[margin=1in]{geometry} % default is 1.5in
+% \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
+\usepackage[title]{appendix} % for attaching appendix
+\allowdisplaybreaks % allow page breaking in display maths, like align
+% allow for more advanced table layout
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+% for adjusting caption settings
+\usepackage{caption}
+\captionsetup[table]{skip=10pt}
+
+\theoremstyle{definition}
+\mdfdefinestyle{defEnv}{%
+  hidealllines=false,
+  nobreak=true,
+  innertopmargin=-1ex,
+}
+
+% The following is for writing block of code
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+% setting of the thickness of the 4 lines of box
+\setlength{\fboxrule}{2pt}
+
+% Use the following to change code language and related settings
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\pagestyle{headings}
+\author{Lectured by Josiah Wang}
+\title{CO70050 Introduction to Machine Learning}
+\affil{Typed by Aris Zhu Yi Qing}
+\begin{document}
+\maketitle
+\newpage
+
+\section{Definitions}
+
+\begin{enumerate}
+    \item \textbf{Artificial Intelligence}:
+        Techniques that enable computers to mimic human behaviour and
+        intelligence. It could be using logic, if-then rules, machine learning,
+        etc.
+    \item \textbf{Machine Learning(ML)}:
+        Subset of AI techniques using statistical methods that enable the
+        systems to learn and improve with experience.
+        \begin{itemize}
+            \item More data means more accurate predictions.
+            \item Select/Extract good features for predictions. 
+                more feature $\nRightarrow$ better prediction (curse of
+                dimensionality: increased computational complexity, data sparsity,
+                overfitting)
+            \item Pipeline: feature encoding, ML algorithm, and evaluation.
+        \end{itemize} 
+    \item \textbf{Deep Learning}:
+        Subset of machine learning techniques using multi-layer Artificial
+        Neural Networks(ANN) and vast amounts of data for learning.
+    \item \textbf{Supervised learning}:
+        Take input variables and correct output labels as \underline{inputs}, 
+        feed them into a supervised \underline{learning algorithm} 
+        to generate a \underline{model} which can be used to
+        \underline{estimate labels} of other input variables.
+        \begin{itemize}
+            \item \textbf{Semi-supervised learning}:
+                Some data have labels, some do not.
+            \item \textbf{Weakly-supervised learning}:
+                Inexact output labels.
+        \end{itemize} 
+    \item \textbf{Unsupervised learning}:
+        Take input variables only, feed them into an unsupervised learning
+        algorithm to generate a model which can be used to estimate labels of
+        other input variables.
+        \begin{itemize}
+            \item discover hidden/latent structure within the data (``lossy data
+                compression'')
+        \end{itemize} 
+    \item \textbf{Reinforcement learning}:
+        Largely the same as unsupervised learning, except that
+        the estimated labels at the end ``interact with an
+        environment'' and send reward signal back to the reinforcement learning
+        algorithm such that the algorithm will take the reward signal into
+        consideration when learning the model next time.
+        \begin{itemize}
+            \item find which action an agent should take, depending on 
+                its current state, to maximise the received rewards (Policy
+                search)
+        \end{itemize} 
+    \item \textbf{Classification}:
+        The task of approximating a mapping function from input variables to
+        \underline{discrete} output variables.
+    \item \textbf{Regression}:
+        The task of approximating a mapping function from input variables to
+        \underline{continuous} output variables.
+    \item \textbf{Lazy Learner}:
+        Stores the training examples and postpones generalising beyond these
+        data until an explicit request is made at test time.
+    \item \textbf{Eager Learner}:
+        Constructs a general, explicit description of the target function based
+        on the provided training examples.
+    \item \textbf{Non-parametric model}: Assume that data distribution cannot be
+        defined in terms of a finite set of parameters.
+        It can be viewed as having infinitely many parameters.
+    \item \textbf{Underfitting/high bias}: a lot of errors, oversimplified
+        assumptions.
+    \item \textbf{Overfitting/high variance}: fits ``perfectly'' the training
+        data, and may not fit the test data well.
+\end{enumerate} 
+
+
+\end{document}
