@@ -100,6 +100,49 @@
     \item No Deadlock (Liveness)
 \end{enumerate} 
 
+\subsection{Protocols in Asynchronous computation}
+
+\begin{enumerate}
+    \item Flag Protocol:
+        \begin{itemize}
+            \item Raise flag
+            \item While A's flag is up
+                \begin{itemize}
+                    \item Lower flag
+                    \item Wait for A's flag to go down
+                    \item Raise flag
+                \end{itemize} 
+            \item Do something
+            \item Lower flag
+        \end{itemize} 
+    \item Producer/Consumer:
+        \begin{itemize}
+            \item For A(producer), while flag is up wait. So when flag becomes down,
+                do something, then raise the flag.
+            \item For B(consumer), while flag is down, wait. So when flag
+                becomes up, do something, then put down the flag.
+        \end{itemize} 
+    \item Readers/Writers:
+        \begin{itemize}
+            \item Each thread \texttt{i} has \texttt{size[i]} counter. Only it
+                increments or decrements.
+            \item To get object's size, a thread reads a ``snapshot'' of all
+                counters.
+            \item This eliminates the bottleneck of ``having exclusive access to
+                the common counter''.
+        \end{itemize} 
+\end{enumerate} 
+
+\subsection{Performance Measurement}
+
+Amdahl's law:
+\[
+    \text{Speedup} = \frac{\text{1-thread execution time}}
+    {n\text{-thread execution time}}
+    = \frac{1}{1-p+\frac{p}{n}},
+\]
+where $p$ is the fraction of the algorithm having parallel execution, and $n$ is
+the number of threads.
 
 
 \end{document}
