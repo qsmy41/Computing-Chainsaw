@@ -69,6 +69,7 @@
 \affil{Typed by Aris Zhu Yi Qing}
 \begin{document}
 \maketitle
+\tableofcontents
 \newpage
 
 \section{Definitions}
@@ -136,12 +137,192 @@
         on the provided training examples.
     \item \textbf{Non-parametric model}: Assume that data distribution cannot be
         defined in terms of a finite set of parameters.
-        It can be viewed as having infinitely many parameters.
+        The distribution depends on the data themselves.
     \item \textbf{Underfitting/high bias}: a lot of errors, oversimplified
         assumptions.
     \item \textbf{Overfitting/high variance}: fits ``perfectly'' the training
         data, and may not fit the test data well.
 \end{enumerate} 
 
+\section{Classification}
+
+\subsection{Instance-based Learning}
+
+\subsubsection{$k$ Nearest Neighbours ($k$-NN) classifier}
+
+\begin{enumerate}
+    \item Non-parametric model
+    \item Lazy learner
+    \item Procedure: Obtain $k$ nearest data, classify the instance under the
+        class which the most number of neighbours belong to.
+    \item $k$ is usually an odd number.
+    \item Increasing $k$ will make the classifier
+        \begin{itemize}
+            \item have a smoother decision boundary (higher bias)
+            \item less sensitive to training data (lower variance)
+        \end{itemize} 
+    \item Various distance metrics, such as:
+        \begin{itemize}
+            \item Manhattan distance ($L^{1}$-norm):
+                \[
+                    d(x^{(i)},x^{(q)})=\sum_{k=1}^{K}
+                    \left|x_k^{(i)}-x_k^{(q)}\right|,
+                \]
+            \item Euclidean distance ($L^{2}$-norm):
+                \[
+                    d(x^{(i)},x^{(q)})=\sqrt{\sum_{k=1}^{K}
+                    {\left(x_k^{(i)}-x_k^{(q)}\right)}^{2}},
+                \]
+            \item Chebyshev distance ($L^{\infty}$-norm):
+                \[
+                    d(x^{(i)},x^{(q)})=\text{max}_{k=1}^{K}\left|x_k^{(i)}-x_k^{(q)}\right|.
+                \]
+        \end{itemize} 
+    \item the curse of dimensionality
+        \begin{itemize}
+            \item $k$-NN relies on distance metrics, which may not work well if
+                using all features in high dimensional space.
+            \item If many features are irrelevant, instances belonging to the
+                same class may be far from each other.
+            \item Solution: Weight each feature differently, or perform feature
+                selection/extraction.
+        \end{itemize} 
+\end{enumerate} 
+
+\subsubsection{Distance-weighted $k$-NN}
+
+\begin{enumerate}
+    \item Any measure favouring the votes of nearby neighbours will work, such
+        as:
+        \begin{itemize}
+            \item Inverse of distance: $w^{(i)}=\frac{1}{d(x^{(i)},x^{(q)})}$,
+            \item Gaussian distribution:
+                $w^{(i)}=\frac{1}{\sqrt{2\pi}}\exp\left(-\frac{d(x^{(i)},x^{(q)})^{2}}{2}\right)$.
+        \end{itemize} 
+    \item $k$ is not so important in distance-weighted $k$-NN. Distant data will
+        have small weights and won't greatly affect classification.
+    \item if $k=N$ (size of the training set): global method. Otherwise, it is a
+        local method.
+    \item Robust to noisy training data --- the impact of isolated noise is
+        smoothened out.
+    \item simple yet powerful, but might be slow for large datasets
+\end{enumerate} 
+
+\subsubsection{$k$-NN regression (quick intro)}
+
+\begin{enumerate}
+    \item compute the \underline{(weighted) mean value} across $k$ nearest neighbours.
+\end{enumerate} 
+
+\subsection{Decision Trees}
+
+\subsubsection{Intuitions and Introduction}
+
+\begin{enumerate}
+    \item Eager learner
+    \item Decision Tree learning (or construction/induction) is a method for
+        approximating discrete classification functions by means of a tree-based
+        representation.
+    \item A decision tree can be represented as a set of if-then rules.
+    \item Decision Tree learning algo employ top-down greedy search through the
+        space of possible solutions.
+    \item General Algorithm:
+        \begin{enumerate}
+            \item \label{dt1}
+                Search for an `optimal' splitting rule on training data.
+            \item \label{dt2}
+                Split your dataset according to the chosen splitting rule
+            \item Repeat \ref{dt1} and \ref{dt2} on each new splitted subset
+                unless the subset contains data of only one class.
+        \end{enumerate} 
+\end{enumerate} 
+
+\subsubsection{Selecting the optimial splitting rule}
+
+\begin{enumerate}
+    \item several metrics:
+        \begin{itemize}
+            \item Information gain: Used in ID3, C4.5
+                \begin{itemize}
+                    \item quantifies the reduction of information entropy
+                \end{itemize} 
+            \item Gini impurity: Used in CART
+            \item Variance reduction: Used in CART
+        \end{itemize} 
+    \item information entropy:
+        \begin{itemize}
+            \item \textbf{Information Content} $I$ is a quantity derived from the
+                probability of an event occurring from a random variable $X$ as
+                \[
+                    I(x)=\log_2(\frac{1}{P(x)})=-\log_2(P(x)),
+                \]
+                which could be interpreted as the amount of information required
+                to fully determine the state of a random variable, and the
+                definition should satisfy several conditions as specified
+                \href{https://en.wikipedia.org/wiki/Entropy_(information_theory)#Characterization}{here}.
+            \item \textbf{Information Entropy} $H$ of a discrete random variable
+                $X$ with its p.m.f. being $P(X)$ is defined as the 
+                expected amount of information content as following:
+                \[
+                    H(X)=E[I(X)]=-\sum_{k=1}^{n} P(x_k)\log_2(P(x_k)),
+                \]
+                where $n$ is the number of possible discrete values of $X$.
+                For a p.d.f. $f(X)$, we can define the
+                \textbf{continuous entropy} as
+                \[
+                    H(X)=-\int_{x} f(x)\log_2(f(x))\mathrm{d}x.
+                \]
+                \begin{itemize}
+                    \item The analogy in continuous case is imperfect (it can
+                        have negative values) but is still often used in deep
+                        learning.
+                    \item The p.d.f. is often unknown, but can be approximated
+                        with density estimation algorithms for instance.
+                \end{itemize} 
+        \end{itemize} 
+    \item Use Information Entropy to select the `optimal' split rule.
+        \begin{itemize}
+            \item \textbf{Information Gain (IG)} is the difference between the
+                initial entropy and the (weighted) average entropy of the
+                produced subsets.
+            \item Mathematically,
+                \[
+                    \text{IG}(D, S) = H(D) - \sum_{s\in S} \frac{|s|}{|D|}H(s),
+                \]
+                where $D$ stands for the dataset, $S$ stands for the subsets
+                after splitting, and $|\cdot|$ is the cardinality operator.
+        \end{itemize} 
+\end{enumerate} 
+
+\subsubsection{Comments}
+
+\begin{enumerate}
+    \item prevent overfitting
+        \begin{itemize}
+            \item Early stopping, e.g. max depth, min examples.
+            \item Pruning
+                \begin{enumerate}[label = (\roman*)]
+                    \item Go through nodes which are connected only to leaf
+                        nodes.
+                    \item Turn each into a leaf node (with majority class
+                        label).
+                    \item Evaluate pruned tree on validation set. Prune if
+                        accuracy higher than unpruned.
+                    \item Repeat until all such nodes have been tested.
+                \end{enumerate} 
+        \end{itemize} 
+    \item Random Forests
+        \begin{itemize}
+            \item Many decision trees voting on the class label.
+            \item Each tree generated with random samples of training set
+                (bagging) and random subset of features.
+        \end{itemize} 
+    \item Regression Trees
+        \begin{itemize}
+            \item Instead of a class label, each leaf node now predicts an
+                $x\in\mathbb{R}$.
+            \item Use a different metric for splitting, e.g. variance reduction.
+        \end{itemize} 
+\end{enumerate} 
 
 \end{document}
