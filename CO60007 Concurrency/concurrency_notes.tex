@@ -15,7 +15,7 @@
 \usepackage{textcomp} % for using degree symbol
 \usepackage{hyperref} % for clickable link in the pdf & customizable reference text
 \usepackage[all]{hypcap} % for clickable link to images instead of caption
-\usepackage[margin=1in]{geometry} % default is 1.5in
+\usepackage[top=0.8in,bottom=0.8in,left=0.5in,right=0.5in]{geometry} % default is 1.5in
 % \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
 \usepackage[title]{appendix} % for attaching appendix
 \allowdisplaybreaks % allow page breaking in display maths, like align
@@ -97,13 +97,13 @@
             \item \textbf{can} be solved by shared variables that can be
                 read or written
         \end{itemize} 
-    \item No Deadlock (Liveness)
+    \item No Deadlock (Liveness): Some event $A$ eventually happens.
 \end{enumerate} 
 
 \subsection{Protocols in Asynchronous computation}
 
 \begin{enumerate}
-    \item Flag Protocol:
+    \item Flag Protocol (from B's perspective):
         \begin{itemize}
             \item Raise flag
             \item While A's flag is up
@@ -144,5 +144,197 @@ Amdahl's law:
 where $p$ is the fraction of the algorithm having parallel execution, and $n$ is
 the number of threads.
 
+\section{Concurrent Semantics}
+
+\subsection{Sequential Consistency (SC)}
+
+Also called \underline{Interleaving Semantics}. 
+The instructions of each thread are executed in order.
+Instructions of different threads interleave arbitrarily.
+
+\paragraph{Notation}
+
+\begin{itemize}
+    \item{\makebox[2cm]{$x,y,z,\ldots$\hfill} shared memory locations
+    \item{\makebox[2cm]{$a,b,c,\ldots$\hfill} private registers
+        \item{\makebox[2cm]{$E,E_1,\ldots$\hfill} expressions over values
+                (integers) and registers
+    \item{\makebox[2cm]{$a:=x$\hfill} \textbf{read} from location $x$ into
+            register $a$
+    \item{\makebox[2cm]{$x:=a$\hfill} \textbf{write} contents of register $a$ to
+            location $x$
+    \item{\makebox[2cm]{$a:=E$\hfill} \textbf{assignment}: compute $E$ and write
+            it to $a$
+\end{itemize} 
+
+\paragraph{ConWhile concurrent programming language}
+
+\begin{align*}
+    B\in \text{Bool}\quad::=& \quad\texttt{true} \,|\, \texttt{false} \,|\, \ldots \\
+    E\in \text{Exp}\quad::=&\quad\ldots \,|\, E + E \,|\, \ldots \\
+    C\in \text{Com}\quad::=&\quad
+    \begin{aligned}[t]
+        & a := E & \text{assignment} \\
+        & |\,a := x & \text{(memory) read} \\
+        & |\,x := a & \text{(memory) write} \\
+        & |\,a := \texttt{CAS}(x,E,E)\,|\,\texttt{FAA}(x,E) & \text{(memory) RMWs} \\
+        & |\,\texttt{skip}\,|\,C;\;C\,|\,\texttt{while}\;B\;\texttt{do}\;C & \\
+        & |\,\texttt{if}\;B\;\texttt{then}\;C\;\texttt{else}\;C, & \\
+    \end{aligned}
+\end{align*} 
+where \texttt{FAA} (fetchAndAdd) is considered \emph{weak}
+RMW because it enables synchronisation between \underline{two} threads only,
+whereas \texttt{CAS} (compareAndSet) is considered \emph{strong} RMW because it
+enables synchronisation among an \underline{arbitrary} number of threads.
+
+
+\paragraph{Model Definitions}
+
+\begin{itemize}
+    \item We model ConWhile \underline{concurrent programs} as a map 
+        from thread identifiers ($\tau\in\text{Tid}$) to sequential commands:
+        \[
+            P\in\text{Prog}\triangleq\text{Tid}\rightarrow\text{Com}.
+        \]
+    \item We use $\parallel$ notation for concurrent programs and write 
+        \[
+            C_1\parallel C_2\parallel \ldots\parallel C_n
+        \]
+        for the $n$-threaded program $P$ with
+        \[
+            \text{dom}(P)=\left\{\tau_1,\ldots,\tau_n\right\}
+        \]
+        and
+        $P(\tau_i)=C_i$ for $i\in\left\{1,\ldots,n\right\}$.
+    \item For instance, we write
+        $\text{dom}(P_{\text{sb}})=\left\{\tau_1,\tau_2\right\}$,
+        with $P_{\text{sb}}(\tau_1)=x:=1;a:=y;$ and
+        $P_{\text{sb}}(\tau_2)=y:=1;b:=x;$, therefore
+        \[
+            P_{\text{sb}}\quad\triangleq\quad
+            x:=1;a:=y;\;\parallel\;y:=1;b:=x;\,.
+        \]
+    \item We model the \underline{shared memory} as a map from locations to
+        values:
+        \[
+            M\in\text{Mem}\triangleq\text{Loc}\rightarrow\text{Val},
+        \]
+        where Val denotes the set of all values, including integer and Boolean
+        values.
+    \item We define \underline{store} as a map from registers to values:
+        \[
+            s\in\text{Store}\triangleq\text{Reg}\rightarrow\text{Val}.
+        \]
+    \item We define \underline{store map} associating each thread with its
+        private store:
+        \[
+            S\in\text{SMap}\triangleq\text{Tid}\rightarrow\text{Store}.
+        \]
+    \item An \underline{SC configuration} is a triple, $(P,S,M)$, comprising a
+        program $P$ to be executed, the store map $S$, and the shared memory
+        $M$.
+    \item The \underline{program transitions} describe the steps in program
+        executions.
+    \item The \underline{storage transitions} describe how instructions interact
+        with the storage (memory) system.
+    \item An \underline{SC transition label}, $l\in\text{Lab}$, may be:
+        \begin{itemize}
+            \item the \emph{empty} label $\epsilon$ to denote a silent transition
+            \item a \emph{read} label $(R,x,v)$ to denote reading value $v$ from
+                memory location $x$
+            \item a \emph{write} label $(W,x,v)$ to denote writing value $v$ to
+                memory location $x$
+            \item a \emph{successful RMW} label $(\text{RMW},x,v_0,v_n)$ to
+                denote updating the value of location $x$ to $v_n$ when the old
+                value of $x$ is $v_0$
+            \item a \emph{failed RMW} label $(\text{RMW},x,v_0,\bot)$ to denote
+                a failed \texttt{CAS} instruction where the old value of $x$
+                does not match $v_0$.
+        \end{itemize} 
+    \item Assume that store $s$ has the mapping for all Boolean expressions $B$
+        and program expressions $E$.
+    \item SC Sequential Transitions (Familiar Cases):
+        \[
+            \frac{C_1,s\xrightarrow{l}_c C_1',s'}{C_1;C_2,s\xrightarrow{l}_c
+            C_1';C_2,s'} \qquad
+            \frac{}{\texttt{skip};C,s\xrightarrow{\epsilon}_c C,s}
+        \]
+        \[
+            \frac{s(B)=\texttt{true}}{\texttt{if}\,B\,\texttt{then}\,C_1\,\texttt{else}\,C_2,s\xrightarrow{\epsilon}_c
+            C_1,s} \qquad
+            \frac{s(B)=\texttt{false}}{\texttt{if}\,B\,\texttt{then}\,C_1\,\texttt{else}\,C_2,s\xrightarrow{\epsilon}_c
+            C_2,s} \qquad
+        \]
+        \[
+            \frac{}{\texttt{while}\,B\,\texttt{do}\,C,s\xrightarrow{\epsilon}_c
+            \texttt{if}\,B\,\texttt{then}\,(C;\,\texttt{while}\,B\,\texttt{do}\,C)\,
+            \texttt{else}\,\texttt{skip}, s}
+        \]
+        \[
+            \frac{s(E)=v\qquad s'=s[a\mapsto
+            v]}{a:=E,s\xrightarrow{\epsilon}_c\texttt{skip},s'}
+        \]
+    \item SC Sequential Transitions (New Cases):
+        \begin{align*}
+            x:=a\qquad& \frac{s(a)=v}
+            {x:=a,s\xrightarrow{(W,x,v)}_c\texttt{skip},s} \\[0.5em]
+            a:=x\qquad& \frac{s'=s[a\mapsto v]}
+            {a:=x,s\xrightarrow{(R,x,v)},s'} \\[0.5em]
+            \texttt{FAA}(x,E)\qquad& \frac{s(E)=v\qquad v_n=v_0+v}
+            {\texttt{FAA}(x,E),s\xrightarrow{(\text{RMW},x,v_0,v_n)}_c\texttt{skip},s}\\[0.5em]
+            \texttt{CAS}(x,E_0,E_n)\text{ (success)}\qquad& 
+            \frac{s(E_0)=v_0\qquad s(E_n)=v_n\qquad s'=s[a\mapsto 1]}
+            {a:=\texttt{CAS}(x,E_0,E_n),s\xrightarrow{(\text{RMW},x,v_0,v_n)}_c 
+            \texttt{skip},s'}\\[0.5em]
+            \texttt{CAS}(x,E_0,E_n)\text{ (failure)}\qquad& 
+            \frac{s(E_0)=v_0\qquad v\neq v_0\qquad s'=s[a\mapsto 0]}
+            {a:=\texttt{CAS}(x,E_0,E_n),s\xrightarrow{(\text{RMW},x,v,\bot)}_c 
+            \texttt{skip},s'}
+        \end{align*} 
+    \item SC (Concurrent) Program Transitions:
+        \[
+            \frac{P(\tau)=C\quad S(\tau)=s\quad C,s\xrightarrow{l}_c C',s'
+            \quad P'=P[\tau\mapsto C']\quad S'=S[\tau\mapsto s']}
+            {P, S\xrightarrow{\tau:l}_p P',S'}
+        \]
+    \item SC Storage Transitions (of the form $M\xrightarrow{\tau:l}_m M'$):
+        \begin{align*}
+            \text{Read}\qquad&
+            \frac{M(x)=v}{M\xrightarrow{\tau:(R,x,v)}_m M}\\[0.5em]
+            \text{Write}\qquad&
+            \frac{M'=M[x\mapsto v]}{M\xrightarrow{\tau:(W,x,v)}_m M'}\\[0.5em]
+            \text{RMW},x,v_0,v_n\qquad&
+            \frac{M(x)=v_0\qquad M'=M[x\mapsto v_n]}
+            {M\xrightarrow{\tau:(\text{RMW},x,v_0,v_n)}_m M'}\\[0.5em]
+            \text{RMW},x,v,\bot\qquad&
+            \frac{M(x)=v}{M\xrightarrow{\tau:(\text{RMW},x,v,\bot)}_m M'}
+        \end{align*} 
+    \item SC Operational Semantics:
+        \begin{align*}
+            \text{silent transition}\qquad&
+            \frac{P,S\xrightarrow{\tau:\epsilon}_p P',S'}{P,S,M\rightarrow P',S',M}\\[0.5em]
+            \shortstack{\text{both program and storage systems 
+            \\take the same transition}}\qquad&
+            \frac{P,S\xrightarrow{\tau:l}_p P',S'\qquad M\xrightarrow{\tau:l}_m M'}
+            {P,S,M\rightarrow P',S',M'}
+        \end{align*} 
+    \item We write $\rightarrow^{*}$ for the reflexive, transitive closure of
+        $\rightarrow$.
+    \item SC Traces
+        \begin{itemize}
+            \item The initial memory, $M_0\triangleq\lambda x.0$.
+            \item The initial store, $s_0\triangleq\lambda a.0$.
+            \item The initial store map, $S_0\triangleq\lambda\tau.s_0$.
+            \item The terminated program,
+                $P_{\texttt{skip}}\triangleq\lambda\tau.\texttt{skip}$.
+            \item Given a program $P$, an \textbf{SC-trace} of $P$ is an
+                evaluation path s.t.
+                \[
+                    P,S_0,M_0\rightarrow^*P_{\texttt{skip}},S,M
+                \]
+                where the pair $(S,M)$ denotes an \textbf{SC-outcome}.
+        \end{itemize} 
+    \item SC is \textbf{neither} deterministic \textbf{nor} confluent.
+\end{itemize} 
 
 \end{document}
