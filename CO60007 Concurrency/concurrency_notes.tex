@@ -1,5 +1,5 @@
 \documentclass[twocolumn,landscape,10pt]{article}
-\usepackage[thinc]{esdiff} % for typesettign derivatives
+\usepackage[thinc]{esdiff} % for typesetting derivatives
 \usepackage{amsthm} % provides an enhanced version of LaTex's \newtheorem command
 \usepackage{mdframed} % framed environments that can split at page boundaries
 \usepackage{enumitem} % bulletin points or other means of listing things
@@ -146,12 +146,6 @@ the number of threads.
 
 \section{Concurrent Semantics}
 
-\subsection{Sequential Consistency (SC)}
-
-Also called \underline{Interleaving Semantics}. 
-The instructions of each thread are executed in order.
-Instructions of different threads interleave arbitrarily.
-
 \paragraph{Notation}
 
 \begin{itemize}
@@ -180,6 +174,7 @@ Instructions of different threads interleave arbitrarily.
         & |\,a := \texttt{CAS}(x,E,E)\,|\,\texttt{FAA}(x,E) & \text{(memory) RMWs} \\
         & |\,\texttt{skip}\,|\,C;\;C\,|\,\texttt{while}\;B\;\texttt{do}\;C & \\
         & |\,\texttt{if}\;B\;\texttt{then}\;C\;\texttt{else}\;C, & \\
+        & |\,\texttt{mfence} & \text{memory fence (TSO only)} \\
     \end{aligned}
 \end{align*} 
 where \texttt{FAA} (fetchAndAdd) is considered \emph{weak}
@@ -188,10 +183,17 @@ whereas \texttt{CAS} (compareAndSet) is considered \emph{strong} RMW because it
 enables synchronisation among an \underline{arbitrary} number of threads.
 
 
+\subsection{Sequential Consistency (SC)}
+
+Also called \underline{Interleaving Semantics}. 
+The instructions of each thread are executed in order.
+Instructions of different threads interleave arbitrarily.
+
+
 \paragraph{Model Definitions}
 
 \begin{itemize}
-    \item We model ConWhile \underline{concurrent programs} as a map 
+    \item We model ConWhile \underline{concurrent program} as a map 
         from thread identifiers ($\tau\in\text{Tid}$) to sequential commands:
         \[
             P\in\text{Prog}\triangleq\text{Tid}\rightarrow\text{Com}.
@@ -240,9 +242,9 @@ enables synchronisation among an \underline{arbitrary} number of threads.
     \item An \underline{SC transition label}, $l\in\text{Lab}$, may be:
         \begin{itemize}
             \item the \emph{empty} label $\epsilon$ to denote a silent transition
-            \item a \emph{read} label $(R,x,v)$ to denote reading value $v$ from
+            \item a \emph{read} label $(\text{R},x,v)$ to denote reading value $v$ from
                 memory location $x$
-            \item a \emph{write} label $(W,x,v)$ to denote writing value $v$ to
+            \item a \emph{write} label $(\text{W},x,v)$ to denote writing value $v$ to
                 memory location $x$
             \item a \emph{successful RMW} label $(\text{RMW},x,v_0,v_n)$ to
                 denote updating the value of location $x$ to $v_n$ when the old
@@ -277,9 +279,9 @@ enables synchronisation among an \underline{arbitrary} number of threads.
     \item SC Sequential Transitions (New Cases):
         \begin{align*}
             x:=a\qquad& \frac{s(a)=v}
-            {x:=a,s\xrightarrow{(W,x,v)}_c\texttt{skip},s} \\[0.5em]
+            {x:=a,s\xrightarrow{(\text{W},x,v)}_c\texttt{skip},s} \\[0.5em]
             a:=x\qquad& \frac{s'=s[a\mapsto v]}
-            {a:=x,s\xrightarrow{(R,x,v)},s'} \\[0.5em]
+            {a:=x,s\xrightarrow{(\text{R},x,v)}_c\texttt{skip},s'} \\[0.5em]
             \texttt{FAA}(x,E)\qquad& \frac{s(E)=v\qquad v_n=v_0+v}
             {\texttt{FAA}(x,E),s\xrightarrow{(\text{RMW},x,v_0,v_n)}_c\texttt{skip},s}\\[0.5em]
             \texttt{CAS}(x,E_0,E_n)\text{ (success)}\qquad& 
@@ -300,9 +302,9 @@ enables synchronisation among an \underline{arbitrary} number of threads.
     \item SC Storage Transitions (of the form $M\xrightarrow{\tau:l}_m M'$):
         \begin{align*}
             \text{Read}\qquad&
-            \frac{M(x)=v}{M\xrightarrow{\tau:(R,x,v)}_m M}\\[0.5em]
+            \frac{M(x)=v}{M\xrightarrow{\tau:(\text{R},x,v)}_m M}\\[0.5em]
             \text{Write}\qquad&
-            \frac{M'=M[x\mapsto v]}{M\xrightarrow{\tau:(W,x,v)}_m M'}\\[0.5em]
+            \frac{M'=M[x\mapsto v]}{M\xrightarrow{\tau:(\text{W},x,v)}_m M'}\\[0.5em]
             \text{RMW},x,v_0,v_n\qquad&
             \frac{M(x)=v_0\qquad M'=M[x\mapsto v_n]}
             {M\xrightarrow{\tau:(\text{RMW},x,v_0,v_n)}_m M'}\\[0.5em]
@@ -336,5 +338,112 @@ enables synchronisation among an \underline{arbitrary} number of threads.
         \end{itemize} 
     \item SC is \textbf{neither} deterministic \textbf{nor} confluent.
 \end{itemize} 
+
+\subsection{Total Store Ordering (TSO)}
+
+$\text{TSO}=\text{SC}+\text{write-read reordering}$. This allows the weak 
+Store Buffering (SB) behaviour. We can stop the reordering by using memory
+fences or RMWs, which can impede performance.
+
+\paragraph{Model Definitions}
+
+\begin{itemize}
+    \item In addition to the \underline{concurrent program}, \underline{shared memory}, 
+        \underline{store}, and \underline{store map} defined in the SC,
+        we have an addition \underline{buffer} associating each thread,
+        modelled as a FIFO sequence of (delayed) write label:
+        \[
+            b\in\text{Buff}\triangleq\text{Seq}\left\langle\text{WLab}\right\rangle
+            \qquad\text{WLab}\triangleq\left\{(\text{W},x,v)\,|\,x\in\text{Loc}\wedge
+            v\in\text{Val}\right\}.
+        \]
+        That is, a buffer entry $(\text{W},x,v)$ denotes a delayed write on $x$
+        with value $v$.
+    \item We define \underline{buffer map} associating each thread with its
+        private buffer:
+        \[
+            B\in\text{BMap}\triangleq\text{Tid}\rightarrow\text{Buff}.
+        \]
+    \item An \underline{TSO configuration} is a quadruple, $(P,S,M,B)$,
+        comprising the program $P$ to be executed, the store map $S$, the shared
+        memory $M$ and the buffer map $B$.
+    \item A \underline{TSO transition label}, $l\in\text{Lab}$, may be:
+        \begin{itemize}
+            \item an SC label, namely $\epsilon$, $(\text{R},x,v)$,
+                $(\text{W},x,v)$, $(\text{RMW},x,v_0,v_n)$,
+                $(\text{RMW},x,v_0,\bot)$
+            \item a \emph{memory fence} label \texttt{MF} for executing an
+                \texttt{mfence}.
+        \end{itemize} 
+    \item TSO Sequential Transition (New case):
+        \[
+            \texttt{mfence} \qquad \frac{}
+            {\texttt{mfence},s\xrightarrow{\texttt{MF}}_c\texttt{skip},s}
+        \]
+    \item TSO Program Transitions: the same as SC Program Transition.
+    \item TSO Storage Transitions 
+        (of the form $M,B\xrightarrow{\tau:l}_m M',B'$):
+        \begin{align*}
+            \text{Read}\qquad&
+            \begin{aligned}
+                &\frac{B(\tau)=b\qquad\texttt{get}(\text{M},b,x)=v}
+                {M,B\xrightarrow{\tau:(\text{R},x,v)}_m M,B},\text{ where}\\[0.5em]
+                & \texttt{get}(\text{M},b,x)\triangleq
+                \begin{cases}
+                    v & \text{if }\exists
+                    b_1,b_2\text{ s.t. }b=b_1.(\text{W},x,v).b_2\\
+                      &\quad\wedge\neg\exists
+                    v'\text{ s.t. }(\text{W},x,v)\in b_2\\
+                    M(x) & \text{otherwise}
+                \end{cases} 
+            \end{aligned}\\[1em]
+            \text{Write}\qquad&
+            \frac{B(\tau)=b\qquad b'=b.(\text{W},x,v)\qquad B'=B[\tau\mapsto b']}
+            {M,B\xrightarrow{\tau:(\text{W},x,v,)}_m M, B'}\\[0.5em]
+            \text{Memory Fence}\qquad&
+            \frac{B(\tau)=\emptyset}{M,B\xrightarrow{\tau:\texttt{MF}}_c M,B}\\[0.5em]
+            \text{RMW},x,v_0,v_n\qquad&
+            \frac{B(\tau)=\emptyset\qquad M(x)=v_0\qquad M'=M[x\mapsto v_n]}
+            {M,B\xrightarrow{\tau:(\text{RMW},x,v_0,v_n)}_m M',B}\\[0.5em]
+            \text{RMW},x,v,\bot\qquad&
+            \frac{B(\tau)=\emptyset\qquad M(x)=v}
+            {M,B\xrightarrow{\tau:(\text{RMW},x,v,\bot)}_m M,B}\\[0.5em]
+            \text{unbuffer}\qquad&
+            \frac{B(\tau)=(\text{W},x,v).b\quad M'=M[x\mapsto v]\quad
+            B'=B[\tau\mapsto b]}
+            {M,B\xrightarrow{\tau:\epsilon}_m M',B'}
+        \end{align*} 
+    \item TSO Operational Semantics:
+        \begin{align*}
+            \text{silent transition in program}\qquad&
+            \frac{P,S\xrightarrow{\tau:\epsilon}_p P',S'}
+            {P,S,M,B\rightarrow P',S',M,B}\\[0.5em]
+            \text{silent transition in storage system}\qquad&
+            \frac{M,B\xrightarrow{\tau:\epsilon}_m M',B'}
+            {P,S,M,B\rightarrow P,S,M',B'}\\[0.5em]
+            \shortstack{\text{both program and storage system 
+            \\take the same transition}}\qquad&
+            \frac{P,S\xrightarrow{\tau:\epsilon}_p P',S'\quad 
+            M,B\xrightarrow{\tau:\epsilon}_m M',B'}
+            {P,S,M,B\rightarrow P',S',M',B'}
+        \end{align*} 
+    \item We write $\rightarrow^{*}$ for the reflexive, transitive closure of
+        $\rightarrow$, the same as the SC's.
+    \item TSO Traces
+        \begin{itemize}
+            \item In addition to the initial memory, initial store, initial
+                store map, and the terminated program defined in SC, we have the
+                initial buffer map, $B_0\triangleq\lambda\tau.\emptyset$.
+            \item Given a program $P$, the initial TSO-configuration of $P$ is
+                $(P,S_0,M_0,B_0)$.
+            \item Given a program $P$, a \textbf{TSO-trace} of $P$ is an
+                evaluation path s.t.
+                \[
+                    P,S_0,M_0,B_0\rightarrow^* P_\texttt{skip},S,M,B_0
+                \]
+                where the pair $(S,M)$ denotes a \textbf{TSO-outcome}.
+        \end{itemize} 
+    \item TSO is also \textbf{neither} deterministic \textbf{nor} confluent.
+\end{itemize}
 
 \end{document}
