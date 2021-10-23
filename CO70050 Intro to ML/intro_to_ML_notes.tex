@@ -325,4 +325,204 @@
         \end{itemize} 
 \end{enumerate} 
 
+\section{ML Evaluation}
+
+\subsection{Common Pipeline}
+
+\begin{enumerate}
+    \item shuffle the initial dataset to get rid of potential implicit ordering
+    \item split shuffled dataset to larger training dataset and smaller test
+        dataset
+    \item use training dataset to train the model
+    \item feed test dataset into the trained model to evaluate the model's performance
+\end{enumerate} 
+
+\subsection{Hyperparameter Tuning}
+
+\begin{itemize}
+    \item \underline{Hyperparameter} is defined as the model parameter that are
+        chosen before the training, such as the $k$ of the $k$-NN algorithm.
+    \item Overall objective is to find the hyperparameter values that lead to
+        the best performance
+    \item The correct approach is to split the dataset into 3:
+        training/validation/test, with common splits between 6:2:2 and 8:1:1.
+    \item It's possible to merge validation set into training set to train the
+        model again with more data after identifying the best hyperparameter
+        using the validation set. This can improve performance.
+\end{itemize} 
+
+\subsection{Corss Validation}
+
+\begin{enumerate}
+    \item used when dataset is small
+    \item divide dataset into $k$ (usually 10) equal folds/splits: use $k-1$
+        folds for training and 1 for testing
+    \item iterate $k$ times, each time test on different portion of data
+    \item performance on all $k$ held-out test sets can be average:
+        \[
+            \text{Global error estimate} = \frac{1}{N}\sum_{i=1}^{N} e_i
+        \]
+    \item \underline{Caution}: The estimate is for \emph{algorithm} accuracy,
+        not \emph{model} accuracy.
+    \item While tuning hyperparameter, doing the same thing as with large
+        datasets at each iteration.
+\end{enumerate} 
+
+\subsection{Evaluation Metrics}
+
+\begin{itemize}
+    \item Confusion Matrix:
+        \[
+            \begin{pmatrix}
+                \text{True Positive} & \text{False Negative}\\
+                \text{False Positive} & \text{True Negative}
+            \end{pmatrix} \quad\text{OR}\quad
+            \begin{pmatrix}
+                \text{TP} & \text{FN}\\
+                \text{FP} & \text{TN}
+            \end{pmatrix}
+        \]
+        \[
+            \text{OR }\begin{pmatrix}
+                \text{TP} & \text{FN} & \text{FN} & \text{FN}\\
+                \text{FP} & \text{TN} & \text{?} & ?\\
+                \text{FP} & \text{?} & \text{TN} & ?\\
+                \text{FP} & \text{?} & \text{?} & \text{TN}\\
+            \end{pmatrix} \text{ for Class 1 in multiple classes}
+        \]
+    \item Metrics:
+        \begin{align*}
+            \text{Accuracy}&=\frac{\text{TP}+\text{TN}}{\text{TP}+\text{TN}+\text{FN}+\text{FP}}\\
+            \text{Classification error} &= 1 - \text{accuracy}\\
+            \text{Precision}&=\frac{\text{TP}}{\text{TP}+\text{FP}}\\
+            \text{Recall}&=\frac{\text{TP}}{\text{TP}+\text{FN}}\\
+            \text{Macro-averaged }\left\langle\text{metric}\right\rangle&
+            =\frac{1}{N}\sum_{i=1}^{N} \left\langle\text{metric}\right\rangle_i\\
+            \text{Micro-averaged precision}&=\frac{\sum_{i=1}^{N} \text{TP}_i}
+            {\sum_{i_1}^{N} \text{TP}_i + \text{FP}_i},
+            \quad\text{same for other metrics}\\
+            F_1&=\frac{2*\text{precision}*\text{recall}}{\text{precision}+\text{recall}}\\
+            F_\beta&=(1+\beta^2)*\frac{\text{precision}*\text{recall}}{(\beta^2*\text{precision})+\text{recall}}\\
+            \text{MSE}&=\frac{1}{N}\sum_{i=1}^{N}
+            {\left(Y_i-\hat{Y}_i\right)}^{2}\\
+            \text{Root MSE}&=\sqrt{\text{MSE}}
+        \end{align*} 
+    \item Precision v.s. Recall:
+        \begin{itemize}
+            \item high recall, low precision:
+                Most of the positive examples are identified correctly (low FN)
+                but there are many FPs.
+            \item high precision, low recall:
+                We miss a lot of positive examples (high FN) but those we
+                predict as positive are really positive (low FP).
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Imbalanced Data Distribution}
+
+\paragraph{Problem}
+\begin{itemize}
+    \item Imbalanced dataset: classes are not equally represented
+    \item accuracy is misleading, affected a lot by the majority class
+    \item Macro-averaged recall can help detect if a class is misclassified, but
+        no info about FP. Similarly for precision.
+    \item we should look at several matrices, along with the confusion matrix
+\end{itemize} 
+
+\paragraph{Solution}
+\begin{itemize}
+    \item normalized matrix: divide each row by the total number of samples in
+        that class
+    \item downsample the majority class/upsample the minority class
+    \item Look at differet metrics and choose ones that reflect the intended
+        behaviour of the model.
+\end{itemize} 
+
+\subsection{Overfitting}
+
+\begin{itemize}
+    \item \underline{Overfitting}: good performance on training data, poor
+        generalization to other data, can occur when:
+        \begin{itemize}
+            \item the model we use is too complex (use right level of
+                complexity)
+            \item the examples in the training set are not representative of all
+                possible situations (get more data)
+            \item learning is performed for too long (stop training earlier)
+        \end{itemize} 
+    \item \underline{underfitting}: poor performance on the training data and
+        poor generalization to other data
+\end{itemize} 
+
+\subsection{Confidence Intervals}
+
+\begin{itemize}
+    \item \underline{True error} of model $h$ is the probability that it
+        misclassifies a randomly drawn example $x$ from distribution $D$:
+        \[
+            \epsilon_D(h):=P[f(x)\neq h(x)].
+        \]
+    \item \underline{Sample error (classification error)} of the model h based on a data sample $S$:
+        \[
+            \epsilon_S(h):=\frac{1}{N}\sum_{x\in S} \delta(f(x),h(x))
+        \]
+    \item \underline{Confidence interval} is defined as,
+        when given a sample $S$ with the number of test samples $n\ge 30$,
+        we can say that with $N\%$ confidence,
+        the true error lies in the interval:
+        \[
+            \epsilon_S(h)\pm Z_N\sqrt{\frac{\epsilon_S(h)*(1-\epsilon_S(h))}{n}}
+        \]
+        where
+        \[
+            \Phi(S'\le\left|Z_N\right|)=N\%
+        \]
+        and $S'$ is the normalized sample of $S$.
+\end{itemize} 
+
+\subsection{Testing for Statistical Significance}
+
+\begin{itemize}
+    \item The \underline{statistical tests} tell us if there is indeed a
+        difference between the two distributions, such as Randomisation test,
+        $T$-test, Wilcoxon rank-sum test, etc.
+    \item The \underline{null hypothesis $H_0$} states that the two algorithms/models
+        perform the same and the performance differences are only due to
+        sampling error.
+    \item The statistical tests return a \underline{$p$-value}: the probability
+        of obtaining observed performance differences (or more), assuming that
+        $H_0$ is correct.
+    \item small $p$-value means we can be more confident that one system is
+        actually different from another.
+    \item performance difference is \underline{statistically significant} if
+        $p<0.05$.
+    \item $p>0.05$ \emph{does not mean} that the two algorithms are similar.
+        E.g. collecting more data can change the $p$-value in certain direction.
+    \item \underline{P-hacking} is the misuse of data analysis to find
+        patterns in data that can be presented as statistically significant
+        when in fact there is no underlying effect. 
+    \begin{itemize}
+        \item 
+            This dramatically increases
+            and understates the risk of FPs, i.e.\ reject the $H_0$ where in fact we
+            shouldn't, i.e.\ we thought there is difference in distribution, where
+            in fact there isn't.
+        \item Fight against P-hacking: adaptive $p$-value
+            \begin{enumerate}
+                \item rank $p$-values from $M$ experiments:
+                    \[
+                        p_1\le p_2\le p_3\le\ldots\le p_M
+                    \]
+                \item Calculate the Benjamini-Hochberg critical value for each
+                    experiment:
+                    \[
+                        z_i=0.05 \frac{i}{M}
+                    \]
+                \item significant results are the ones where the $p$-value is
+                    smaller than the critical value
+            \end{enumerate} 
+    \end{itemize} 
+\end{itemize} 
+
+
 \end{document}
