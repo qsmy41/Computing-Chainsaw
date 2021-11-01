@@ -524,5 +524,142 @@
     \end{itemize} 
 \end{itemize} 
 
+\section{Artificial Neural Networks (ANN)}
+
+\begin{itemize}
+    \item ANN: a class of ML algorithms. Architectures of connected neurons,
+        usually optimized with gradient descent
+    \item Deep learning: using ANN with multiple hidden layers. Complex models
+        trained with large datasets.
+\end{itemize} 
+
+\subsection{Linear Regression}
+
+\begin{itemize}
+    \item Supervised learning
+    \item the desired labels are continuous (instead of discrete)
+    \item represented as $y = ax + b$
+    \item Loss function: 
+        \begin{itemize}
+            \item 
+                ``sum-of-squares'', $E=\frac{1}{2}\sum_{i=1}^{N}
+                {\left(\hat{y}^{(i)}-y^{(i)}\right)}^{2}$.
+            \item 
+                smaller values of $E$ means more accurate predictions
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Gradient Descient}
+
+\begin{itemize}
+    \item Definition: Repeatedly update a parameter $\theta$ by taking small
+        steps in the negative direction of the partial derivative, as follow
+        \[
+            \theta := \theta - \alpha \frac{\partial E}{\partial \theta}
+        \]
+        where $\alpha$ is a hyperparameter for the learning rate/step size.
+    \item vector notation: for a function $f:\mathbb{R}^{K}\mapsto\mathbb{R}$,
+        the gradient is
+        \[
+            \nabla_\theta f(\theta) = \begin{pmatrix}
+                \dfrac{\partial f(\theta)}{\partial \theta_1} \\[2ex]
+                \dfrac{\partial f(\theta)}{\partial \theta_2} \\
+                \vdots \\
+                \dfrac{\partial f(\theta)}{\partial \theta_K}
+            \end{pmatrix}.
+        \]
+        In the case of $E(\theta)$, we can find the value of $\theta$ such that
+        the value of $E(\theta)$ is minimized by setting partial derivative to 0.
+        We thus have
+        \[
+            \nabla_\theta E(\theta) = X^T(X\theta - y)=0
+            \quad\Longrightarrow\quad \theta^* = {\left(X^TX\right)}^{-1}X^Ty,
+        \]
+        where
+        \[
+            X = \begin{pmatrix}
+                x_1^{(1)} & \ldots & x_{K}^{(1)} & 1.0 \\[1ex]
+                x_1^{(2)} & \ldots & x_{K}^{(2)} & 1.0 \\
+                \vdots & \ddots & \vdots & \vdots \\
+                x_1^{(N)} & \ldots & x_{K}^{(N)} & 1.0
+            \end{pmatrix},\qquad
+            y = \begin{pmatrix}
+                y^{(1)} \\
+                y^{(2)} \\
+                \vdots \\
+                y^{(N)}
+            \end{pmatrix},\qquad
+            \theta = \begin{pmatrix}
+                    a_1 \\
+                    \vdots \\
+                    a_K \\
+                    b
+            \end{pmatrix}.
+        \]
+\end{itemize} 
+
+\subsection{Neurons}
+
+\begin{itemize}
+    \item Given input $X$, parameter $\theta$, and \textbf{activation function}
+        $g(z)$, we can model the \textbf{artificial neuron} as
+        \[
+            \hat{y}=g(X\theta).
+        \]
+    \item \underline{logistic activation function}(logistic function): 
+        \[
+            g(z)=\frac{1}{1+e^{-z}}.
+        \]
+    \item \underline{Perceptron}: uses the \underline{threshold function} as the
+        activation function
+        \[
+            h(x) = f(W^Tx) =
+            \begin{cases}
+                1 & \text{if sum($W^Tx$)} > 0 \\
+                0 & \text{otherwise},
+            \end{cases} 
+        \]
+        with the learning rule
+        \[
+            \theta_i := \theta_i + \alpha(y-h(x))x_i,
+        \]
+        where $y$ is the desired output and $h(x)$ is the prediction.
+    \item connecting multiple neurons in a manner of multiple layers creates a
+        \underline{multi-layer network}.
+\end{itemize} 
+
+\subsection{Activation functions}
+
+\begin{itemize}
+    \item Sigmoid activation:
+        \[
+            f(x) = \sigma(x) = \frac{1}{1 + e^{-x}}.
+        \]
+    \item Tanh activation:
+        \[
+            f(x) = \text{tanh}(x) = \frac{e^{x}-e^{-x}}{e^{x}+e^{-x}}.
+        \]
+    \item ReLU activation:
+        \[
+            f(x)=\text{ReLU}(x)=\begin{cases}
+                0 & \text{for } x\le 0 \\
+                x & \text{for } x\ge 0.
+            \end{cases} 
+        \]
+    \item Softmax activation:
+        \[
+            \text{softmax}(z_i)=\frac{e^{z_i}}{\sum_ke^{z_k}}.
+        \]
+    \item Most activation functions are applied element-wise. Softmax is an
+        exception.
+    \item ReLU is commonly used for very deep networks. Tanh and sigmoid also
+        work well and can be more robust.
+    \item \underline{activation of output layer} should depends on the task.
+        \begin{itemize}
+            \item classifying into two classes $\rightarrow$ sigmoid or tanh
+            \item predicting an unbounded score $\rightarrow$ linear
+            \item predicting a probability distribution $\rightarrow$ softmax
+        \end{itemize} 
+\end{itemize} 
 
 \end{document}
