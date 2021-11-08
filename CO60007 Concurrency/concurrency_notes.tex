@@ -19,6 +19,8 @@
 % \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
 \usepackage[title]{appendix} % for attaching appendix
 \allowdisplaybreaks % allow page breaking in display maths, like align
+\usepackage{xcolor} % for setting color of a block of text
+\usepackage[normalem]{ulem} % for strikethrough text
 % allow for more advanced table layout
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -70,6 +72,7 @@
 \begin{document}
 \maketitle
 
+\clearpage
 \section{Synchronisation Paradigms}
 
 \subsection{Properties in Asynchronous computation}
@@ -144,20 +147,21 @@ Amdahl's law:
 where $p$ is the fraction of the algorithm having parallel execution, and $n$ is
 the number of threads.
 
+\clearpage
 \section{Concurrent Semantics}
 
 \paragraph{Notation}
 
 \begin{itemize}
-    \item{\makebox[2cm]{$x,y,z,\ldots$\hfill} shared memory locations
-    \item{\makebox[2cm]{$a,b,c,\ldots$\hfill} private registers
-        \item{\makebox[2cm]{$E,E_1,\ldots$\hfill} expressions over values
+    \item\makebox[2cm]{$x,y,z,\ldots$\hfill} shared memory locations
+    \item\makebox[2cm]{$a,b,c,\ldots$\hfill} private registers
+    \item\makebox[2cm]{$E,E_1,\ldots$\hfill} expressions over values
                 (integers) and registers
-    \item{\makebox[2cm]{$a:=x$\hfill} \textbf{read} from location $x$ into
+    \item\makebox[2cm]{$a:=x$\hfill} \textbf{read} from location $x$ into
             register $a$
-    \item{\makebox[2cm]{$x:=a$\hfill} \textbf{write} contents of register $a$ to
+    \item\makebox[2cm]{$x:=a$\hfill} \textbf{write} contents of register $a$ to
             location $x$
-    \item{\makebox[2cm]{$a:=E$\hfill} \textbf{assignment}: compute $E$ and write
+    \item\makebox[2cm]{$a:=E$\hfill} \textbf{assignment}: compute $E$ and write
             it to $a$
 \end{itemize} 
 
@@ -393,13 +397,13 @@ fences or RMWs, which can impede performance.
                     v & \text{if }\exists
                     b_1,b_2\text{ s.t. }b=b_1.(\text{W},x,v).b_2\\
                       &\quad\wedge\neg\exists
-                    v'\text{ s.t. }(\text{W},x,v)\in b_2\\
+                    v'\text{ s.t. }(\text{W},x,v')\in b_2\\
                     M(x) & \text{otherwise}
                 \end{cases} 
             \end{aligned}\\[1em]
             \text{Write}\qquad&
             \frac{B(\tau)=b\qquad b'=b.(\text{W},x,v)\qquad B'=B[\tau\mapsto b']}
-            {M,B\xrightarrow{\tau:(\text{W},x,v,)}_m M, B'}\\[0.5em]
+            {M,B\xrightarrow{\tau:(\text{W},x,v)}_m M, B'}\\[0.5em]
             \text{Memory Fence}\qquad&
             \frac{B(\tau)=\emptyset}{M,B\xrightarrow{\tau:\texttt{MF}}_c M,B}\\[0.5em]
             \text{RMW},x,v_0,v_n\qquad&
@@ -445,5 +449,163 @@ fences or RMWs, which can impede performance.
         \end{itemize} 
     \item TSO is also \textbf{neither} deterministic \textbf{nor} confluent.
 \end{itemize}
+
+\clearpage
+\section{Linearization}
+
+\paragraph{Notation}
+
+\begin{itemize}
+    \item\makebox[2cm]{\texttt{A q.enq(x)}\hfill} Invocation:
+        $\left\langle\text{thread}\right\rangle$
+        $\left\langle\text{object}\right\rangle$.$\left\langle\text{method}\right\rangle$($\left\langle\text{arguments}\right\rangle$)
+    \item\makebox[2cm]{\texttt{A q:void}\hfill} Response:
+        $\left\langle\text{thread}\right\rangle$
+        $\left\langle\text{object}\right\rangle$:$\left\langle\text{result}\right\rangle$
+    \item\makebox[2cm]{$H$\hfill} Sequence of invocations and responses,
+        which looks like:
+        \[
+            H = \quad\begin{align}
+                &\texttt{A q.enq(3)} \\
+                &\texttt{A q:void} \\
+                &\texttt{A q.enq(5)} \\
+                &\textcolor{teal}{\texttt{B p.enq(4)}} \\
+                &\textcolor{teal}{\texttt{B p:void}} \\
+                &\textcolor{teal}{\texttt{B q.deq()}} \\
+                &\textcolor{teal}{\texttt{B q:3}} \\
+            \end{align} 
+        \]
+\end{itemize} 
+
+\paragraph{Definitions}
+
+\begin{itemize}
+    \item Invocation and response \underline{match} if thread and object names
+        agree
+    \item \underline{Object Projections}:
+        \[
+            H = \quad\begin{align}
+                &\texttt{A q.enq(3)} \\
+                &\texttt{A q:void} \\
+                &\texttt{A q.enq(5)} \\
+                &\textcolor{teal}{\texttt{B p.enq(4)}} \\
+                &\textcolor{teal}{\texttt{B p:void}} \\
+                &\textcolor{teal}{\texttt{B q.deq()}} \\
+                &\textcolor{teal}{\texttt{B q:3}} \\
+            \end{align} 
+            \qquad\Longrightarrow\qquad
+            H|q = \quad\begin{align}
+                &\texttt{A q.enq(3)} \\
+                &\texttt{A q:void} \\
+                &\texttt{A q.enq(5)} \\
+                \\
+                \\
+                &\textcolor{teal}{\texttt{B q.deq()}} \\
+                &\textcolor{teal}{\texttt{B q:3}} \\
+            \end{align} 
+        \]
+    \item \underline{Thread Projections}:
+        \[
+            H = \quad\begin{align}
+                &\texttt{A q.enq(3)} \\
+                &\texttt{A q:void} \\
+                &\texttt{A q.enq(5)} \\
+                &\textcolor{teal}{\texttt{B p.enq(4)}} \\
+                &\textcolor{teal}{\texttt{B p:void}} \\
+                &\textcolor{teal}{\texttt{B q.deq()}} \\
+                &\textcolor{teal}{\texttt{B q:3}} \\
+            \end{align} 
+            \qquad\Longrightarrow\qquad
+            H|B = \quad\begin{align}
+                \\
+                \\
+                \\
+                &\textcolor{teal}{\texttt{B p.enq(4)}} \\
+                &\textcolor{teal}{\texttt{B p:void}} \\
+                &\textcolor{teal}{\texttt{B q.deq()}} \\
+                &\textcolor{teal}{\texttt{B q:3}} \\
+            \end{align} 
+        \]
+    \item An invocation is \underline{pending} if it has no matching response.
+        It may or may not have taken effect.
+    \item A \underline{complete subhistory} is a history where pending
+        invocations are discarded.
+    \item A \underline{sequential history} is one whose invocations are always
+        \emph{immediately} followed by their respective responses.
+    \item A \underline{well-formed} history is one whose per-thread projections 
+        are sequential.
+    \item \underline{Equivalent histories} are those which have the same
+        threads and their per-thread projections are the same.
+    \item A \underline{sequential specification} is some way of telling whether
+        a single-thread, single-object history, is legal.
+    \item A sequential history $H$ is \underline{legal} if for every object $x$,
+        $H|x$ is in the sequential specification for $x$.
+    \item A method call \underline{precedes} another if its response event 
+        precedes the other's invocation event.
+        \begin{itemize}
+            \item Given history $H$, method executions $m_0, m_1$ in $H$,
+                we say
+                \[
+                    m_0 \rightarrow_H m_1
+                \]
+                if $m_0$ precedes $m_1$.
+            \item The above relation is a \underline{partial} order. It is
+                \underline{total} order if $H$ is sequential.
+        \end{itemize} 
+    \item History $H$ is \textbf{\underline{linearizable}} if
+        \begin{itemize}
+            \item it can be extended to a \emph{complete} history $G$
+            \item $G$ is equivalent to a \emph{legal sequential} history $S$,
+                where $\pmb{\rightarrow_G}\,\subseteq\,\pmb{\rightarrow_S}$.
+        \end{itemize} 
+    \item Remarks on linearizability:
+        \begin{itemize}
+            \item For pending invocations which took effect, keep them, and
+                discard the rest.
+            \item $\pmb{\rightarrow_H}$ stands for the set of all precedence
+                relations in history $H$.
+            \item Focus on \underline{total}(defined in every state) method.
+            \item Partial methods are equivalent to thread blocking, and
+                blocking is unrelated to synchronisation.
+            \item We can identify ``\underline{linearization points}'' 
+                to help check if executions are linearizable. The point
+                \begin{itemize}
+                    \item is between invocation and response events
+                    \item correspond to the effect of the call
+                    \item ``justify'' the whole execution
+                \end{itemize} 
+        \end{itemize} 
+    \item \textbf{Composability Theorem}:
+        \[
+            \text{History $H$ is linearizable $\iff\,\forall$ object $x$, $H|x$ is
+            linearizable.}
+        \]
+    \item History $H$ is \textbf{\underline{sequentially consistent (SC)}} if
+        \begin{itemize}
+            \item it can be extended to a \emph{complete} history $G$
+            \item $G$ is equivalent to a \emph{legal sequential} history $S$,
+                \sout{where $\pmb{\rightarrow_G}\,\subseteq\,\pmb{\rightarrow_S}$}.
+        \end{itemize} 
+    \item Remarks on SC:
+        \begin{itemize}
+            \item \emph{Cannot} re-order operations done by the same thread
+            \item \emph{Can} re-order non-overlapping operations done by
+                different threads
+            \item SC is too strong for hardware architecture, 
+                yet too weak for software \emph{specification}.
+            \item SC is useful for abstracting software \emph{implementation}.
+        \end{itemize} 
+    \item (non-examinable) Progress conditions (from least ideal to most ideal):
+        \begin{itemize}
+            \item Deadlock-free: \emph{some} thread trying to acquire the lock
+                eventually succeeds.
+            \item Starvation-free: \emph{every} thread trying to acquire the lock
+                eventually succeeds.
+            \item Lock-free: \emph{some} thread calling a method
+                eventually returns.
+            \item Wait-free: \emph{every} thread calling a method
+                eventually returns.
+        \end{itemize} 
+\end{itemize} 
 
 \end{document}
