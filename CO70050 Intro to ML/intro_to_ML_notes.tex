@@ -126,6 +126,13 @@
     \item \textbf{Classification}:
         The task of approximating a mapping function from input variables to
         \underline{discrete} output variables.
+        \begin{itemize}
+            \item Binary classification: only two possible cases.
+            \item Multi-class classification: more than one possible class to
+                choose from, but every input belongs to exactly one class.
+            \item Multi-label classification: Each input can belong to more than
+                one class.
+        \end{itemize} 
     \item \textbf{Regression}:
         The task of approximating a mapping function from input variables to
         \underline{continuous} output variables.
@@ -549,55 +556,6 @@
         \end{itemize} 
 \end{itemize} 
 
-\subsection{Gradient Descient}
-
-\begin{itemize}
-    \item Definition: Repeatedly update a parameter $\theta$ by taking small
-        steps in the negative direction of the partial derivative, as follow
-        \[
-            \theta := \theta - \alpha \frac{\partial E}{\partial \theta}
-        \]
-        where $\alpha$ is a hyperparameter for the learning rate/step size.
-    \item vector notation: for a function $f:\mathbb{R}^{K}\mapsto\mathbb{R}$,
-        the gradient is
-        \[
-            \nabla_\theta f(\theta) = \begin{pmatrix}
-                \dfrac{\partial f(\theta)}{\partial \theta_1} \\[2ex]
-                \dfrac{\partial f(\theta)}{\partial \theta_2} \\
-                \vdots \\
-                \dfrac{\partial f(\theta)}{\partial \theta_K}
-            \end{pmatrix}.
-        \]
-        In the case of $E(\theta)$, we can find the value of $\theta$ such that
-        the value of $E(\theta)$ is minimized by setting partial derivative to 0.
-        We thus have
-        \[
-            \nabla_\theta E(\theta) = X^T(X\theta - y)=0
-            \quad\Longrightarrow\quad \theta^* = {\left(X^TX\right)}^{-1}X^Ty,
-        \]
-        where
-        \[
-            X = \begin{pmatrix}
-                x_1^{(1)} & \ldots & x_{K}^{(1)} & 1.0 \\[1ex]
-                x_1^{(2)} & \ldots & x_{K}^{(2)} & 1.0 \\
-                \vdots & \ddots & \vdots & \vdots \\
-                x_1^{(N)} & \ldots & x_{K}^{(N)} & 1.0
-            \end{pmatrix},\qquad
-            y = \begin{pmatrix}
-                y^{(1)} \\
-                y^{(2)} \\
-                \vdots \\
-                y^{(N)}
-            \end{pmatrix},\qquad
-            \theta = \begin{pmatrix}
-                    a_1 \\
-                    \vdots \\
-                    a_K \\
-                    b
-            \end{pmatrix}.
-        \]
-\end{itemize} 
-
 \subsection{Neurons}
 
 \begin{itemize}
@@ -659,6 +617,262 @@
             \item classifying into two classes $\rightarrow$ sigmoid or tanh
             \item predicting an unbounded score $\rightarrow$ linear
             \item predicting a probability distribution $\rightarrow$ softmax
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Loss function}
+
+\begin{itemize}
+    \item lower loss means better task performance
+    \item MSE (quadratic loss, or L2 loss):
+        \[
+            \text{MSE}=\frac{1}{N}\sum_{i=1}^{N} {\left(\hat{y}_i-y_i\right)}^{2}
+        \]
+    \item maximize the likelihood of the network assigning the correct labels to
+        all inputs in our dataset:
+        \[
+            \prod_{i=1}^{N} p\left(y^{(i)}\,|\,x^{(i)};\theta\right),
+        \]
+        assuming examples are i.i.d. s.t. $p(A\wedge B)=p(A)p(B)$.
+    \item For binary classification, the probability of success output given
+        input:
+        \[
+            \prod_{i=1}^{N} {\left(\hat{y}^{(i)}\right)}^{y^{(i)}}
+            {\left(1-\hat{y}^{(i)}\right)}^{1-y^{(i)}}.
+        \]
+        Maximizing the above expression is equivalent to maximizing
+        \[
+            \sum_{i=1}^{N}
+            y^{(i)}\log\left(\hat{y}^{(i)}\right)+(1-\hat{y}^{(i)})\log\left(1-\hat{y}^{(i)}\right).
+        \]
+        Turning this into a loss we can minimise the \textbf{binary
+        cross-entropy}:
+        \[
+            L=-\frac{1}{N}\sum_{i=1}^{N} 
+            y^{(i)}\log\left(\hat{y}^{(i)}\right)+(1-\hat{y}^{(i)})\log\left(1-\hat{y}^{(i)}\right)
+        \]
+        which can be generalized to \textbf{categorical cross-entropy} for
+        multi-class classification:
+        \[
+            L=-\frac{1}{N}\sum_{i=1}^{N} \sum_{c=1}^{C}
+            y_c^{(i)}\log\left(\hat{y}_c^{(i)}\right),
+        \]
+        where $C$ is the set of possible classes and $\hat{y}_c^{(i)}$ is the
+        predicted probability of class $c$ for datapoint $i$.
+\end{itemize} 
+
+\subsection{Backward Propagation}
+
+Assume that there are
+\begin{itemize}
+    \item $N$ samples,
+    \item $M$ output nodes,
+    \item $D^{(i)}$ nodes at layer $i$, and let the first layer be at index 0,
+    \item $t + 1$ number of layers in total.
+\end{itemize} 
+and let
+\begin{itemize}
+    \item $L\in\mathbb{R}^{N\times M}$ be the loss of the ANN,
+    \item $W^{(i)}\in\mathbb{R}^{D^{(i - 1)}\times D^{(i)}}$ be the weights at layer $i$,
+    \item $X^{(i)}\in\mathbb{R}^{N\times D^{(i)}}$
+        be the activated node values at layer $i$.
+    \item $Z^{(i)}$ be the linear-combination values at layer $i$,
+    \item $g(Z)$ be the activation function of $Z$,
+    \item $X:=X^{(0)}$ to be the input values
+    \item $\hat{Y}:=X^{(t)}$ to be the output values.
+\end{itemize} 
+Thus
+\begin{align*}
+    \Delta^{(i)}:=\frac{\partial L}{\partial W^{(i)}}
+    & = \frac{\partial Z^{(i)}}{\partial W^{(i)}}\frac{\partial L}{\partial Z^{(i)}}\\
+    & = \frac{\partial \left(X^{(i-1)}W^{(i)}\right)}{\partial W^{(i)}}\delta^{(i)}\\
+    & = X^{(i-1)}\delta^{(i)},
+\end{align*} 
+where for $0 < i < t$,
+\begin{align*}
+    \delta^{(i)}:=\frac{\partial L}{\partial Z^{(i)}}
+    & = \frac{\partial Z^{(i+1)}}{\partial Z^{(i)}}
+    \frac{\partial L}{\partial Z^{(i + 1)}} \\
+    & = \frac{\partial \left(W^{(i+1)}*g(Z^{(i)})\right)}{\partial
+    Z^{(i)}}\delta^{(i+1)}\\
+    & = \delta^{(i+1)}W^{(i+1)}g'(Z^{(i)}),
+\end{align*} 
+and for $i = t$,
+\begin{align*}
+    \delta^{(t)}
+    & = \frac{\partial L}{\partial Z^{(t)}} \\
+    & = \frac{\partial \hat{Y}}{\partial Z^{(t)}}
+    \frac{\partial L}{\partial \hat{Y}}\\
+    & = \frac{\partial g(Z^{(t)})}{\partial Z^{(t)}}
+    \frac{\partial L}{\partial \hat{Y}}\\
+    & = g'(Z^{(t)}) \frac{\partial L}{\partial \hat{Y}},
+\end{align*} 
+where the value of $\frac{\partial L}{\partial \hat{Y}}$ depends on the chosen
+loss function, and the value of $g'(Z^{(i)})$ depends on the chosen activation
+function.
+
+\subsection{Gradient Descent}
+
+\begin{itemize}
+    \item Definition: Repeatedly update a parameter $W$ by taking small
+        steps in the negative direction of the partial derivative, as follow
+        \[
+            W := W - \alpha \frac{\partial L}{\partial W}
+        \]
+        where $\alpha$ is a hyperparameter for the learning rate/step size.
+    \item vector notation: for a function $f:\mathbb{R}^{K}\mapsto\mathbb{R}$,
+        the gradient is
+        \[
+            \nabla_\theta f(\theta) = \begin{pmatrix}
+                \dfrac{\partial f(\theta)}{\partial \theta_1} \\[2ex]
+                \dfrac{\partial f(\theta)}{\partial \theta_2} \\
+                \vdots \\
+                \dfrac{\partial f(\theta)}{\partial \theta_K}
+            \end{pmatrix}.
+        \]
+        In the case of $L(W)$ being MSE, we can find the value of $W$ such that
+        the value of $L(W)$ is minimized by setting partial derivative to 0.
+        We thus have
+        \[
+            \nabla_W E(W) = X^T(XW - y)=0
+            \quad\Longrightarrow\quad W^* = {\left(X^TX\right)}^{-1}X^Ty,
+        \]
+        where
+        \[
+            X = \begin{pmatrix}
+                x_1^{(1)} & \ldots & x_{K}^{(1)} & 1.0 \\[1ex]
+                x_1^{(2)} & \ldots & x_{K}^{(2)} & 1.0 \\
+                \vdots & \ddots & \vdots & \vdots \\
+                x_1^{(N)} & \ldots & x_{K}^{(N)} & 1.0
+            \end{pmatrix},\qquad
+            y = \begin{pmatrix}
+                y^{(1)} \\
+                y^{(2)} \\
+                \vdots \\
+                y^{(N)}
+            \end{pmatrix},\qquad
+            \theta = \begin{pmatrix}
+                    a_1 \\
+                    \vdots \\
+                    a_K \\
+                    b
+            \end{pmatrix}.
+        \]
+    \item Comparisons among various gradient descent methods:
+        \begin{itemize}
+            \item gradient descent: Compute gradient based on the whole dataset.
+            \item \underline{stochastic} gradient descent: Loop over each datapoint,
+                compute gradient based on the data point and update
+                weights. This can be very noisy.
+            \item \underline{mini-batched} gradient descent: Loop over batches
+                of datapoints, compute gradient based on the batch and update
+                weights. This is what we mostly use in practice.
+        \end{itemize} 
+    \item Adaptive learning rates: Take smaller steps as we get closer to the
+        minimum. Strategies for updating the learning rate include:
+        \begin{itemize}
+            \item every epoch
+            \item after a certain number of epochs
+            \item when performance on the validation set hasn't improved for
+                several epochs.
+        \end{itemize} 
+    \item Weight initialization:
+        \begin{itemize}
+            \item zeros
+            \item normal: draw randomly from a normal distribution $\sim N(0,1)$ or
+                $N(0,0.1)$
+            \item Xavier Glorot:
+                \[
+                    W\sim
+                    U\left[-\frac{\sqrt{6}}{\sqrt{n_j+n_{j+1}}},\frac{\sqrt{6}}{\sqrt{n_j+n_{j+1}}}\right],
+                \]
+                where $U$ is the uniform distribution, $n_j$ is the number of
+                neurons in the previous layer, $n_{j+1}$ is the number of
+                neurons in the next layer.
+            \item Random initialization lead to different results, sometimes
+                even with the same seed! So embrace randomness, run with
+                different random seeds and report the average.
+                \begin{itemize}
+                    \item GPU threads finish in a random order, leading to
+                        randomness.
+                    \item Small rounding errors add up.
+                \end{itemize} 
+        \end{itemize} 
+    \item Data normalization:
+        \begin{itemize}
+            \item min-max normalization: scaling the smallest value to $a$ and
+                largest value to $b$,
+                \[
+                    X' = a +
+                    \frac{X-X_\text{min}}{X_\text{max}-X_\text{min}}(b-a)
+                \]
+            \item standardization (z-normalization): scaling the data to follow
+                standard normal distribution,
+                \[
+                    X'=\frac{X-\mu}{\sigma}
+                \]
+            \item Normalization helps because $\Delta^{(i)}\propto X^{(i)}$,
+                \[
+                    \Delta^{(i)}=\frac{\partial L}{\partial
+                    W^{(i)}}=X^{(i-1)}\frac{\partial L}{\partial Z^{(i)}}.
+                \]
+            \item the scaling parameters, like $a$ and $b$ in min-max
+                normalization, need to be calculated based on the 
+                \emph{training set only}.
+        \end{itemize} 
+    \item Gradient checking: By calculating
+            \[
+                W^{(i)}_t = W^{(i)}_{t-1} - \alpha
+               \frac{\partial L(W^{(i)})}{\partial W^{(i)}}
+               \quad\Longrightarrow\quad
+               \frac{\partial L(W^{(i)})}{\partial W^{(i)}}
+                =\frac{W^{(i)}_{t-1}-W^{(i)}_t}{\alpha},
+            \]
+            where $t$ indicates the number of iterations, and
+            \[
+                \frac{\partial L(W^{(i)})}{\partiaW W^{(i)}}
+                \approx \frac{L(W^{(i)} + \epsilon)-L(W^{(i)} -
+                \epsilon)}{2\epsilon},
+            \]
+            where $\epsilon>0$ is very small, both values should be pretty
+            similar.
+\end{itemize} 
+
+\subsection{Overfitting in ANN}
+
+\begin{itemize}
+    \item Very important to use \underline{held-out} validation and test sets.
+    \item If ANN is \underline{underfitting} on the training data, we can try
+        increasing the number of neurons/layers.
+    \item If ANN is \underline{overfitting} on the training data too fast, we
+        can try reducing its capacity by lowering the number of neurons/layers.
+    \item To tackle the problem of overfitting:
+        \begin{itemize}
+            \item early stopping:
+                We can use the validation data to choose when to stop
+                (before the model keeps improving until it overfits).
+            \item regularization: Adding some info/constraints to stop the model
+                from overfitting.
+                \begin{itemize}
+                    \item L2 regularization:
+                        \[
+                            L_2 = L + \lambda \sum_w w^{2}
+                            \quad\Longrightarrow\quad
+                            W := W - \alpha\left(\frac{\partial L}{\partial
+                            W}+2\lambda w\right).
+                        \]
+                    \item L1 regularization:
+                        \[
+                            L_1 = L + \lambda \sum_w|w|
+                            \;\Longrightarrow\;
+                            W := W - \alpha\left(\frac{\partial L}{\partial
+                            W}+\lambda\,\text{sign}(w)\right).
+                        \]
+                \end{itemize} 
+            \item dropout: During training, randomly set some (typically 50\%)
+                neural activations to 0. During testing, use all the neurons,
+                but scale the activations. This prevents the ANN from relying on
+                any one node.
         \end{itemize} 
 \end{itemize} 
 
