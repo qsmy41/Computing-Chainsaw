@@ -49,7 +49,7 @@
 
 % Use the following to change code language and related settings
 \lstset{frame=tb,
-  language=Python,
+  language=C++,
   aboveskip=3mm,
   belowskip=3mm,
   showstringspaces=false,
@@ -604,6 +604,45 @@ fences or RMWs, which can impede performance.
                 eventually returns.
             \item Wait-free: \emph{every} thread calling a method
                 eventually returns.
+        \end{itemize} 
+\end{itemize} 
+
+\newpage
+\section{Locks}
+
+\subsection{SpinLock}
+
+\begin{lstlisting}[C++]
+void Lock() { 
+    // lock_bit_ is a boolean, represents if lock is acquired
+    while (lock_bit_.exchange(true)) {
+        // Did not get the lock -- spin until it's free
+        while (lock_bit_.load()) {
+            // someone still holds the lock
+        }
+        // observed the lock being free -- try to grab it
+    }
+}
+\end{lstlisting} 
+
+\begin{itemize}
+    \item \texttt{lock\_bit\_.exchange(true)}: 
+        performs Test-And-Set(TAS) operation.
+        \begin{itemize}
+            \item It enters the memory to set \texttt{lock\_bit\_} to
+                \texttt{true}, and return its old value
+            \item It also thrashes the cached values for other cores, i.e.\
+                the cached value of \texttt{lock\_bit\_} is invalidated for
+                other cores. This leads to memory access 
+                when other cores load the value of \texttt{lock\_bit\_} 
+                and cache the value thereafter.
+        \end{itemize} 
+    \item \texttt{lock\_bit\_.load()}:
+        loads the value of \texttt{lock\_bit\_}.
+        \begin{itemize}
+            \item If cached value of \texttt{lock\_bit\_} is valid, load the
+                value from cache.
+            \item Otherwise load the value from memory.
         \end{itemize} 
 \end{itemize} 
 
