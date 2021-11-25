@@ -1047,5 +1047,144 @@ function.
         \end{itemize} 
 \end{itemize} 
 
+\section{Evolutionary algorithm}
+
+\subsection{Definition}
+
+\begin{itemize}
+    \item Gene: sequence of nucleotides in DNA that codes a particular trait
+    \item Genotype: set of genes, represents a solution
+    \item DNA: support of the genotype
+    \item Phenotype: physiological expression of/developed from the genotype
+    \item Fitness function: meausres the performance of the phenotypes
+    \item Selection operator: Selects the solutions that will be reproduced
+    \item Cross-over operator: mixes the parents' genotype
+    \item Mutation operator: type and frequency of the variations applied to the
+        genotype after reproduction
+\end{itemize} 
+
+\subsection{Main Concept}
+
+\begin{enumerate}
+    \item Randomly generate a population.
+    \item \label{ea-step2} Evaluate each individual(phenotype) in the population.
+    \item Rank and select individuals s.t.
+        \begin{itemize}
+            \item Worse ones are ``killed''.
+            \item Better ones undergo cross-over and mutation, then add them
+                to the population
+        \end{itemize} 
+    \item Go back to step \ref{ea-step2} until certain stopping criterion is
+        hit.
+\end{enumerate} 
+
+\subsection{Comments}
+
+\begin{itemize}
+    \item Common selection operators:
+        \begin{itemize}
+            \item \underline{biased roulette wheel}: The likelihood for an 
+                individual to be selected is proportional to its fitness.
+            \item \underline{tournament}: keep on randomly drawing two 
+                individuals from the population and select the best 
+                until enough parents are collected.
+            \item \underline{elitism}: keep the best individuals (usually top
+                10\%) from the current generation to the new generation
+                s.t. the fitness of the best individual in the population cannot
+                decrease.
+        \end{itemize} 
+    \item Cross-over operators: single-/multi-point cross-over, which is to
+        exchange the portions of genotype along the split points.
+    \item Mutation operators: flip/swap bits.
+    \item Stopping criterion:
+        \begin{itemize}
+            \item when a specific fitness value is reached
+            \item after a predefined number of generations/evaluations
+            \item when the best fitness in the population stagnate for a
+                predefined number of generations
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Evolutionary Strategies ($(\mu+\lambda)$-ES)}
+
+\begin{itemize}
+    \item targeting real-parameter problems
+    \item Approach:
+        \begin{itemize}
+            \item genotype: list of reals
+            \item parent selection: uniform
+            \item mutation: generated from a Gaussian
+            \item No cross-over and selection method
+        \end{itemize} 
+    \item Algorithm:
+        \begin{enumerate}
+            \item randomly generate a population of $(\mu+\lambda)$ individuals.
+            \item \label{es-step2} evaluate the population
+            \item select the $\mu$ best individuals from the population as
+                pareant (called $x$)
+            \item generate $\lambda$ offsprings (called $y$) from the parents:
+                \[
+                    y_i=x_j + \mathcal{N}(0,\sigma)
+                \]
+                where $j\in\left\{0,\ldots,\mu-1\right\}$ is randomly generated.
+            \item form the new population defined as:
+                \[
+                    \text{Population}=\left(\bigcup_i^\lambda y_i\right)\bigcup
+                    \left(\bigcup_j^\mu x_j\right)
+                \]
+            \item return to step \ref{es-step2}.
+        \end{enumerate} 
+    \item Usually $\frac{\lambda}{\mu}\approx 5$.
+    \item value of $\sigma$ is crucial:
+        \begin{itemize}
+            \item large $\sigma$: the population moves quickly to the solution,
+                but has a hard time to refine it
+            \item small $\sigma$: the population moves slowly and might be more
+                affected by local optimums.
+        \end{itemize} 
+    \item adaptive $\sigma$:
+        \begin{enumerate}
+            \item $x_j' = \left\{x_j, \sigma_j\right\}$
+            \item $\sigma_i=\sigma_j\exp\left(\tau_0\mathcal{N}(0,1)\right)$
+            \item $y_i=x_j+\sigma_i\mathcal{N}(0,1)$
+        \end{enumerate} 
+        where $\tau_0$ is the learning rate.
+\end{itemize} 
+
+\subsection{Novelty Search (NS) and QD optimisation}
+
+\begin{itemize}
+    \item The \textbf{behavioural descriptor} characterises certain aspects of
+        the solutions, defining the ``types'' of solutions.
+    \item NS optimises the novelty of the solution instead of the quality of the
+        solution (fitness value).
+    \item Object of Quality-Diversity (QD) optimisation: Learning in a single
+        optimisation process a large collection of \underline{diverse} and
+        \underline{high-performing} solutions.
+    \item QD algorithm:
+        \begin{enumerate}
+            \item get a collection of population
+            \item stochastic selection
+            \item random mutation
+            \item evaluation in terms of \underline{novelty} and
+                \underline{local competition} instead of global competition
+            \item tentative addition to the collection, and repeat the above
+        \end{enumerate} 
+    \item Multi-dimensional Archive of Phenotypic Elites (MAP-Elites):
+        \begin{itemize}
+            \item Discretise the behavioural descriptor (BD) space in a grid and
+                try to fill it with the best solutions.
+            \item Each new solution goes to the grid corresponding to its BD.
+                If the grid is empty, add the new solution; if the cell is
+                already occupied, the solution with the best fitness is kept.
+            \item MAP-Elites = Grid + Uniform random selection
+            \item quantify performance by \underline{diversity},
+                \underline{performance}, \underline{convergence speed} of
+                previous two metrics, or \underline{QD-score} which sums up all
+                the fitness values of solutions in the archive.
+        \end{itemize} 
+\end{itemize} 
+
+
 
 \end{document}
