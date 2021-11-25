@@ -693,7 +693,7 @@ where for $0 < i < t$,
     \delta^{(i)}:=\frac{\partial L}{\partial Z^{(i)}}
     & = \frac{\partial Z^{(i+1)}}{\partial Z^{(i)}}
     \frac{\partial L}{\partial Z^{(i + 1)}} \\
-    & = \frac{\partial \left(W^{(i+1)}*g(Z^{(i)})\right)}{\partial
+    & = \frac{\partial \left(W^{(i+1)}g(Z^{(i)})\right)}{\partial
     Z^{(i)}}\delta^{(i+1)}\\
     & = \delta^{(i+1)}W^{(i+1)}g'(Z^{(i)}),
 \end{align*} 
@@ -875,5 +875,177 @@ function.
                 any one node.
         \end{itemize} 
 \end{itemize} 
+
+\section{Clustering}
+
+\subsection{$K$-means}
+
+\subsubsection{Algorithm}
+\begin{enumerate}
+    \item Select $K$, generate $K$ random cluster centroids.
+    \item \label{k-means-step2} Assign each training example to the nearest
+        centroid. i.e.\
+        \[
+            \forall i\in\left\{1,\ldots,N\right\},
+            c^{(i)}=\underset{k\in\left\{1,\ldots,K\right\}}{\text{argmin}}
+            \norm{x^{(i)}-\mu_k}^{2}
+        \]
+    \item \label{k-means-step3}Update position of each centroid by computing the mean position of all
+        examples assigned to it. i.e.\
+        \[
+            \forall k\in\left\{1,\ldots,K\right\},
+            \mu_k=\frac{\sum_{i=1}^{N} 1(c^{(i)}=k)\cdot x^{(i)}}{\sum_{i=1}^{N}
+            1(c^{(i)}=k)}
+        \]
+    \item Stop if position of centroids did not change. Otherwise go to step
+        \ref{k-means-step2}.
+\end{enumerate} 
+
+\subsubsection{Comments}
+
+\begin{itemize}
+    \item $K$-means optimization objective:
+        \[
+            L(c^{(1)},\ldots,c^{(N)},\mu_1,\ldots,\mu_K)=
+            \frac{1}{N}\sum_{i=1}^{N} \norm{x^{(i)}-\mu_{c^{(i)}}}^{2}.
+        \]
+        Step \ref{k-means-step2} minimizes $L$ w.r.t. $c$, 
+        whereas step \ref{k-means-step3} minimizes $L$ w.r.t. $\mu$.
+    \item Use ``elbow method'' to select $K$.
+    \item Strength
+        \begin{itemize}
+            \item simple: easy to understand and implement
+            \item popular: used very often for clustering
+            \item efficient: linear complexity, since $K\ll N$ and $T\ll N$.
+        \end{itemize} 
+    \item Weakness
+        \begin{itemize}
+            \item finds local optimum and is sensitive to the initial centroid
+                positions
+            \item only applicable if a distance function exists
+            \item sensitive to outliers
+            \item not suitable for discovering clusters that are not
+                hyper-ellipsoids/hyper-spheres.
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Probability Density Estimation}
+
+\subsubsection{Background}
+
+\begin{itemize}
+    \item \textbf{Generative Models} model the distribution of a class $p(X|y)$,
+        i.e.\ understand the underlying model/distribution given the
+        predictions.
+    \item \textbf{Discriminative Models} directly model $p(y|X)$, i.e.\ predict
+        the output given the input dataset/distribution.
+    \item Non-parametric approaches:
+        \begin{itemize}
+            \item Don't make any assumption about the form: low bias and high
+                variance.
+            \item can interpret as that the number of parameters grow with data.
+            \item \underline{Histogram} is a typical approach for non-parametric 
+                density estimation -- decreasing the number of bins smooths out $p(x)$
+            \item \underline{Kernel Density Estimation} computes $\hat{p}(x)$
+                by looking at training examples within a kernel function $H$ (or
+                Parzen window):
+                \[
+                    \hat{p}(x)=\frac{1}{N}\sum_{i=1}^{N}
+                    \frac{1}{h^{D}}H\left(\frac{x-x^{(i)}}{h}\right),
+                \]
+                where $h$ is the bandwidth (window size), $D$ is the number of
+                dimensions s.t. $h^{D}$ is the volume of window. Increasing $h$
+                smooths out $\hat{p}(x)$.
+        \end{itemize} 
+    \item Parametric approaches:
+        \begin{itemize}
+            \item Make simplified assumptions about the form: high bias and low
+                variance.
+            \item number of parameters is fixed, i.e.\ doesn't grow with data.
+            \item Gaussian distribution is a typical approach for parametric
+                density estimation
+            \item Use MLE to optimize likelihood
+        \end{itemize} 
+    \item Combined approach, mixture models:
+        \[
+            p(x)=\sum_{k=1}^{K}\pi_kp_k(x),
+        \]
+        where $0\le\pi_k\le 1$ and $\sum_{k=1}^{K} \pi_k=1$.
+\end{itemize} 
+
+\subsubsection{GMM-EM}
+
+\begin{itemize}
+    \item Gaussian Mixture Model (GMM):
+        \[
+            p(\mathbf{x}|\theta)=\sum_{k=1}^{K}
+            \pi_k\mathcal{N}(\mathbf{x}|\mu_k,\Sigma_k)
+        \]
+    \item Expectation-Maximization (EM) Algorithm:
+        \begin{enumerate}
+            \item Initialization: Choose a $K$ and randomly initialize
+                parameters,
+                \[
+                    \theta=\left\{\pi_k,\mu_k,\Sigma_k:k=1,\ldots,K\right\},\quad
+                    \sum_{k=1}^{K} \pi_k=1,0\le\pi_k\le 1.
+                \]
+            \item \label{em-step2} E-step: comptue the \underline{responsibilities} for each
+                training example $x^{(i)}$ and each mixture component $k$
+                \[
+                    r_{ik}=\frac{\pi_k\mathcal{N}(\mathbf{x}^{(i)}|\mu_k,\Sigma_k)}
+                    {\sum_{j=1}^{K}\pi_j\mathcal{N}(\mathbf{x}^{(i)}|\mu_j,\Sigma_j)}
+                \]
+            \item M-step: update the \underline{mean} of all mixture component
+                \[
+                    \hat{\mu}_k=\frac{1}{N_k}\sum_{i=1}^{N}
+                    r_{ik}\mathbf{x}^{(i)},
+                \]
+                where
+                \[
+                    N_k=\sum_{i=1}^{N} r_{ik},
+                \]
+                update the \underline{covariance} of all mixture components
+                \[
+                    \Sigma_k=\frac{1}{N_k}\sum_{i=1}^{N}r_{ik}
+                    \left(\mathbf{x}^{(i)}-\hat{\mu}_k\right)
+                    {\left(\mathbf{x}^{(i)}-\hat{\mu}_k\right)}^{T},
+                \]
+                and update the \underline{mixing proportion} of all mixture
+                components
+                \[
+                    \pi_k=\frac{N_k}{N}
+                \]
+            \item Convergence checking: stop if no significant change in
+                parameters or likelihood stagnated, otherwise go back to step
+                \ref{em-step2}.
+        \end{enumerate} 
+    \item Comments
+        \begin{itemize}
+            \item minimize the \underline{Bayesian Information Criterion (BIC)}
+                to obtain the best $K$:
+                \[
+                    \text{BIC}_K=\mathcal{L}(K)+\frac{P_K}{2}\log(N)
+                \]
+                where 
+                \begin{itemize}
+                    \item 
+                        $\mathcal{L}(K)$ is the negative log likelihood
+                        (encourages fitting of data),
+                    \item $P_K$ is the number of parameters,
+                    \item $N$ is the number samples, 
+                    \item implying $\frac{P_K}{2}\log(N)$ penalizes
+                        complex models.
+                \end{itemize} 
+                For instance, for 2D Gaussians, $P_K=6K-1$, since each 2D
+                Gaussian has 2 means, 3 covariances and 1 mixing proportion
+                hyperparameters. Minus 1 to remove one extra mixing proportion.
+            \item perform cross-validation to obtain the best $K$.
+            \item GMM-EM = ``Soft $K$-means clustering'', every point belongs to
+                several clusters in certain degrees
+            \item $K$-means = ``hard clustering'', every points belongs to
+                exactly one cluster
+        \end{itemize} 
+\end{itemize} 
+
 
 \end{document}
