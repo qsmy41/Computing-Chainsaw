@@ -48,10 +48,9 @@
 \setlength{\fboxrule}{2pt}
 
 % Use the following to change code language and related settings
-\lstset{frame=tb,
-  language=C++,
-  aboveskip=3mm,
-  belowskip=3mm,
+\lstset{language=C++,
+  aboveskip=1mm,
+  belowskip=1mm,
   showstringspaces=false,
   columns=flexible,
   basicstyle={\small\ttfamily},
@@ -62,7 +61,8 @@
   stringstyle=\color{mauve},
   breaklines=true,
   breakatwhitespace=true,
-  tabsize=3
+  tabsize=3,
+  literate={~} {$\sim$}{1}
 }
 
 \pagestyle{headings}
@@ -71,7 +71,9 @@
 \affil{Typed by Aris Zhu Yi Qing}
 \begin{document}
 \maketitle
+\tableofcontents
 
+\newpage
 \section{Synchronisation Paradigms}
 
 \subsection{Properties in Asynchronous computation}
@@ -146,10 +148,10 @@ Amdahl's law:
 where $p$ is the fraction of the algorithm having parallel execution, and $n$ is
 the number of threads.
 
-\clearpage
+\newpage
 \section{Concurrent Semantics}
 
-\paragraph{Notation}
+\subsection{Notation}
 
 \begin{itemize}
     \item\makebox[2cm]{$x,y,z,\ldots$\hfill} shared memory locations
@@ -164,7 +166,7 @@ the number of threads.
             it to $a$
 \end{itemize} 
 
-\paragraph{ConWhile concurrent programming language}
+\subsection{ConWhile concurrent programming language}
 
 \begin{align*}
     B\in \text{Bool}\quad::=& \quad\texttt{true} \,|\, \texttt{false} \,|\, \ldots \\
@@ -191,9 +193,6 @@ enables synchronisation among an \underline{arbitrary} number of threads.
 Also called \underline{Interleaving Semantics}. 
 The instructions of each thread are executed in order.
 Instructions of different threads interleave arbitrarily.
-
-
-\paragraph{Model Definitions}
 
 \begin{itemize}
     \item We model ConWhile \underline{concurrent program} as a map 
@@ -348,8 +347,6 @@ $\text{TSO}=\text{SC}+\text{write-read reordering}$. This allows the weak
 Store Buffering (SB) behaviour. We can stop the reordering by using memory
 fences or RMWs, which can impede performance.
 
-\paragraph{Model Definitions}
-
 \begin{itemize}
     \item In addition to the \underline{concurrent program}, \underline{shared memory}, 
         \underline{store}, and \underline{store map} defined in the SC,
@@ -449,10 +446,10 @@ fences or RMWs, which can impede performance.
     \item TSO is also \textbf{neither} deterministic \textbf{nor} confluent.
 \end{itemize}
 
-\clearpage
+\newpage
 \section{Linearization}
 
-\paragraph{Notation}
+\subsection{Notation}
 
 \begin{itemize}
     \item\makebox[2cm]{\texttt{A q.enq(x)}\hfill} Invocation:
@@ -476,7 +473,7 @@ fences or RMWs, which can impede performance.
         \]
 \end{itemize} 
 
-\paragraph{Definitions}
+\subsection{Definitions}
 
 \begin{itemize}
     \item Invocation and response \underline{match} if thread and object names
@@ -608,10 +605,161 @@ fences or RMWs, which can impede performance.
 \end{itemize} 
 
 \newpage
-\section{Locks}
+\section{Concurrency in C++}
+
+\subsection{Threads and Locks}
+
+\subsubsection{\texttt{std::thread}}
+
+\begin{lstlisting}[C++]
+#include <thread>
+#include <functional> // Provides std::ref
+
+// approach 1
+void Foo(int by_value, std::string& by_reference) { ... }
+std::string world = "World";
+std::thread t1(Foo, 1, std::ref(world));
+
+// approach 2
+int y, x = 3;
+std::thread t2([x, &y]() -> void {
+    y = x * 42;
+});
+
+t1.join();
+t2.join();
+\end{lstlisting}
+
+\subsubsection{\texttt{std::mutex}}
+
+\begin{lstlisting}[C++]
+#include <mutex>
+
+std::mutex mutex_;
+mutex_.lock();
+mutex_.unlock();
+\end{lstlisting}
+
+\subsubsection{\texttt{std::scoped\_lock<std::mutex>}}
+
+\begin{lstlisting}[C++]
+class ScopedLock {
+public:
+    explicit ScopedLock(std::mutex &mutex) : mutex_(mutex) {
+        mutex_.lock();
+    }
+
+    ~ScopedLock() {
+        mutex_.unlock();
+    }
+
+private:
+    std::mutex &mutex_;
+}
+\end{lstlisting}
+
+\subsubsection{\texttt{std::unique\_lock<std::mutex>}}
+
+\begin{itemize}
+    \item constructed with one mutex
+    \item locks mutex on construction (default), or deferred locking:
+        \\\texttt{std::unique\_lock<std::mutex> lock(mutex\_, std::defer\_lock);}
+    \item allows unlocking and relocking
+    \item unlocks mutex on destruction if still held
+    \item supports transfer of ownership to a distinct \emph{unique} 
+        owner via \texttt{std::move}.
+\end{itemize} 
+
+\subsubsection{\texttt{std::condition\_variable}}
+
+\begin{lstlisting}[C++]
+#include <condition_variable>
+
+std::condition_variable condition_;
+condition_.notify_one();
+condition_.notify_all();
+
+std::unique_lock<std::mutex> lock(mutex_);
+/* Assuming that the thread has locked the mutex:
+ * 1. return if predicate holds (continue executing code after wait())
+ * 2. release lock
+ * 3. block until another thread signals (via notify_one or norify_all)
+ * 4. acquire lock, then return to step 1
+ */
+condition_.wait(lock, [...]() -> bool {
+    return ...;
+});
+\end{lstlisting}
+
+\subsection{Atomics}
+
+\subsubsection{Operations on \texttt{std::atomic<T>}}
+
+\begin{itemize}
+    \item \texttt{store(x)}: store value \texttt{x} of type \texttt{T}
+    \item \texttt{load()}: yields value of type \texttt{T}
+    \item \texttt{exchange(x)}: store \texttt{x} and return old value
+    \item \texttt{compare\_exchange\_strong(expected, desired)}:
+        \begin{itemize}
+            \item \underline{Success}: old value is \texttt{expected}, store
+                \texttt{desired}, return \texttt{true}
+            \item \underline{Failure}: old value not \texttt{expected}, store
+                old value to \texttt{expected}, return \texttt{false}
+        \end{itemize} 
+    \item \texttt{compare\_exchange\_weak(expected, desired)}:
+        the same as the previous operation,
+        except that it allows to fail spuriously, i.e.\ fail even if old value
+        is \texttt{expected}.
+\end{itemize} 
+
+\subsubsection{(RMW) Operations on \texttt{std::atomic<integral\_type>}}
+
+\begin{itemize}
+    \item \texttt{fetch\_add(x)}: replace the value with (value + \texttt{x}),
+        return old value.
+    \item \texttt{fetch\_sub(x)}: similar
+    \item \texttt{fetch\_and(x)}: similar
+    \item \texttt{fetch\_or(x)}: similar
+    \item \texttt{fetch\_xor(x)}: similar
+\end{itemize} 
+
+\subsubsection{Memory ordering}
+\begin{itemize}
+    \item Atomics are sequentially consistent by default.
+    \item \textbf{Relaxed memory order} only guarantee sequential consistency
+        \emph{per location}.
+    \item
+        \textbf{Acquire semantics} prevents memory reordering of the
+        read-acquire with any read or write operation that 
+        \underline{\emph{follows}} it in program order,
+        i.e.\ all memory operations after read-acquire happen after
+        read-acquire.
+    \item
+        \textbf{Release semantics} prevents memory reordering of the
+        write-release with any read or write operation that
+        \underline{\emph{precedes}} it in program order.
+        i.e.\ all memory operations before write-release happen before
+        write-release.
+    \item In fact, acquiring a lock implies acquire semantics, releasing a lock
+        implies release semantics!
+    \item Please refer to
+        \href{https://preshing.com/20120913/acquire-and-release-semantics}{this}
+        for detailed explanation and discussion on acquire-release semantics.
+    \item various atomics semantics:
+        \begin{itemize}
+            \item \texttt{std::memory\_order\_seq\_cst}
+            \item \texttt{std::memory\_order\_relaxed}
+            \item \texttt{std::memory\_order\_release}
+            \item \texttt{std::memory\_order\_acquire}
+            \item \texttt{std::memory\_order\_acq\_rel}
+        \end{itemize} 
+    \item example code snippet:
+        \texttt{x.fetch\_add(1, std::memory\_order\_acq\_rel);}
+\end{itemize} 
 
 \subsection{SpinLock}
 
+\subsubsection{Local spinning}
 \begin{lstlisting}[C++]
 void Lock() { 
     // lock_bit_ is a boolean, represents if lock is acquired
@@ -624,14 +772,92 @@ void Lock() {
     }
 }
 \end{lstlisting} 
+\smallskip
+\subsubsection{Active backoff}
+\begin{lstlisting}[C++]
+void Lock() { 
+    while (lock_bit_.exchange(true)) {
+        // Did not get the lock -- spin until it's free
+        do {
+            for (volatile size_t i = 0; i < 100; i++) {
+                // Do nothing
+            }
+        } while (lock_bit_.load());
+        // observed the lock being free -- try to grab it
+    }
+}
+\end{lstlisting} 
+\smallskip
+\subsubsection{Passive backoff}
+\begin{lstlisting}[C++]
+#include <emmintrin.h>
+void Lock() { 
+    while (lock_bit_.exchange(true)) {
+        // Did not get the lock -- spin until it's free
+        do {
+            for (size_t i = 0; i < 4; i++) {
+                // Tell hardware that we are spinning
+                _mm_pause();
+            }
+        } while (lock_bit_.load());
+        // observed the lock being free -- try to grab it
+    }
+}
+\end{lstlisting} 
+\smallskip
+\subsubsection{Exponential backoff}
+\begin{lstlisting}[C++]
+void Lock() { 
+    const size_t kMinBackoffIterations = 4u;
+    const size_t kMaxBackoffIterations = 1u << 10u;
+    size_t backoff_iterations = kMinBackoffIterations;
+    while (lock_bit_.exchange(true)) {
+        // Did not get the lock -- spin until it's free
+        do {
+            for (size_t i = 0; i < backoff_iterations; i++) {
+                // Tell hardware that we are spinning
+                _mm_pause();
+            }
+            backoff_iterations = 
+                std::min(backoff_iterations << 1, kMaxBackoffIterations);
+        } while (lock_bit_.load());
+        // observed the lock being free -- try to grab it
+    }
+}
+\end{lstlisting} 
+\smallskip
+\subsubsection{Ticket lock (Fairness)}
+\begin{lstlisting}[C++]
+class SpinLockTicket {
+public:
+    SpinLockTicket() : next_ticket_(0), now_serving_(0) {}
 
+    void Lock() {
+        const auto ticket = next_ticket_.fetch_add(1);
+        while (now_serving_.load() != ticket) {
+            _mm_pause();
+        }
+    }
+
+    void Unlock() {
+        now_serving_.store(now_serving_.load() + 1);
+    }
+
+private:
+    std::atomic<size_t> next_ticket_;
+    std::atomic<size_t> now_serving_;
+}
+\end{lstlisting} 
+\medskip
+\subsubsection{Comments}
 \begin{itemize}
     \item \texttt{lock\_bit\_.exchange(true)}: 
         performs Test-And-Set(TAS) operation.
         \begin{itemize}
             \item It enters the memory to set \texttt{lock\_bit\_} to
                 \texttt{true}, and return its old value
-            \item It also thrashes the cached values for other cores, i.e.\
+            \item It also thrashes the cached values (\textbf{cache thrashing})
+                for other cores, i.e.\
                 the cached value of \texttt{lock\_bit\_} is invalidated for
                 other cores. This leads to memory access 
                 when other cores load the value of \texttt{lock\_bit\_} 
@@ -643,6 +869,17 @@ void Lock() {
             \item If cached value of \texttt{lock\_bit\_} is valid, load the
                 value from cache.
             \item Otherwise load the value from memory.
+        \end{itemize} 
+    \item \texttt{volatile}:
+        a hint to the implementation to avoid aggressive optimisation involving
+        the object.
+    \item \texttt{\_mm\_pause()}:
+        calls x86's underlying processor instructions for hinting that program
+        is spinning.
+        \begin{itemize}
+            \item Allows the processor to ``do nothing'' more efficiently,
+                thereby reducing energy consumption.
+            \item Does \emph{not} include OS context switch.
         \end{itemize} 
 \end{itemize} 
 
