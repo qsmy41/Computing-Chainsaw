@@ -655,7 +655,7 @@ public:
 
 private:
     std::mutex &mutex_;
-}
+};
 \end{lstlisting}
 
 \subsubsection{\texttt{std::unique\_lock<std::mutex>}}
@@ -846,7 +846,7 @@ public:
 private:
     std::atomic<size_t> next_ticket_;
     std::atomic<size_t> now_serving_;
-}
+};
 \end{lstlisting} 
 \medskip
 \subsubsection{Comments}
@@ -882,5 +882,134 @@ private:
             \item Does \emph{not} include OS context switch.
         \end{itemize} 
 \end{itemize} 
+
+\subsection{Futex and Hybrid Lock}
+
+\subsubsection{\texttt{FUTEX\_WAIT}}
+
+\begin{itemize}
+    \item Arguments: \texttt{int *p}, \texttt{int v}.
+    \item Returns immediately if \texttt{*p != v}.
+    \item Otherwise, adds thread to wait queue associated with \texttt{p}.
+\end{itemize} 
+
+\subsubsection{\texttt{FUTEX\_WAKE}}
+
+\begin{itemize}
+    \item Arguments: \texttt{int *p}, \texttt{int wake\_count}.
+    \item Wake up \texttt{wake\_count} threads that are on the wait queue for
+        \texttt{p}.
+    \item \texttt{1} and \texttt{INT\_MAX}: the only sensible values for
+        \texttt{wake\_count}.
+\end{itemize} 
+
+\subsubsection{Simple mutex with \texttt{futex}}
+
+\begin{lstlisting}[C++]
+class MutexSimple {
+public:
+    MutexSimple() : state_(kFree) {}
+
+    /* Atomically exchange state_ with 1
+     * Result is not kLocked: got the mutex! No need to call futex
+     * Otherwise call FUTEX_WAIT
+     *
+     * If NOW state_ == kLocked: someone else unlocked the mutex!
+     * return immediately to the while loop condition to perform TAS
+     * otherwise go to sleep.
+     */
+    void Lock() {
+        while (state_.exchange(kLocked) == kLocked) {
+            syscall(SYS_futex, reinterpret_cast<int*>(&state_), FUTEX_WAIT, kLocked, nullptr, nullptr, 0);
+        }
+    }
+
+    /* Store 0 to state_
+     * Call FUTEX_WAKE in case other threads are waiting
+     * Ask FUTEX_WAKE to wake up one waiter
+     */
+    void Unlock() {
+        state_.store(kFree);
+        syscall(SYS_futex, reinterpret_cast<int*>(&state_), FUTEX_WAKE, 1, nullptr, nullptr, 0);
+    }
+
+private:
+    const int kFree = 0;
+    const int kLocked = 1;
+    std::atomic<int> state_;
+};
+\end{lstlisting} 
+
+\subsubsection{Smart \texttt{futex}-based mutex}
+
+\begin{lstlisting}[C++]
+class MutexFutex {
+public:
+    MutexFutex() : state_(kFree) {}
+
+    /* It is NOT possible to have a thread sleeping forever.
+     *
+     * Neutral (N): The thread isn't interested in the lock.
+     * Critical (C): The thread holds the lock.
+     * Trying (T): In the do-while loop to try to acquire lock again.
+     * Sleeping (S): Sleeping due to having called FUTEX_WAIT.
+     * 
+     * To have a thread sleeping forever, we must have either
+     * C, N, N, ..., N, S    and   state_ == 1
+     * OR
+     * N, N, N, ..., N, S    and   state_ == 0.
+     *
+     * In order to enter the state S, we must have been through:
+     * C, N, N, ..., N, T      or    N, N, N, ..., N, T
+     * and T could only be changed from N if there is alr a thread in C.
+     * The 1st situation implies state_ == 2 after T changes to S.
+     * The 2nd situation doesn't make sense at all.
+     */
+    void Lock() {
+        int old_value = cmpxchg(kFree, kLockedNoWaiters);
+        if (old_value == kFree) {
+            // We got the lock without contention - good
+            return;
+        }
+        do {
+            // Call FUTEX_WAIT if someone else got the lock.
+            // Think exhaustively in this approach:
+            // when old_value == x,
+            // what happen when state_ is one of {0, 1, 2}\{x}?
+            if (old_value == kLockedWaiters ||
+                    cmpxchg(kLockedNoWaiters, kLockedWaiters) != kFree) {
+                syscall(SYS_futex, reinterpret_cast<int*>(&state_), FUTEX_WAIT, kLockedWaiters, nullptr, nullptr, 0);
+            }
+            old_value = cmpxchg(kFree, kLockedWaiters);
+            // whoever manages to have old_value == kFree got the lock!
+        } while (old_value != kFree);
+    }
+
+    /* If state_ == 2, we think there were waiters when we locked,
+     * therefore should call FUTEX_WAKE.
+     * If state_ == 1, we think there were no waiters when we locked,
+     * therefore unnecessary to call FUTEX_WAKE.
+     * But either way, ensure that state_ is 0 when Unlock() returns.
+     */
+    void Unlock() {
+        if (state_.fetch_sub(1) == kLockedWaiters) {
+            state_.store(kFree);
+            syscall(SYS_futex, reinterpret_cast<int*>(&state_), FUTEX_WAKE, 1, nullptr, nullptr, 0);
+        }
+    }
+
+private:
+    int cmpxchg(int expected, int desired) {
+        state_.compare_exchange_strong(expected, desired);
+        return expected;
+    }
+
+    const int kFree = 0;
+    const int kLockedNoWaiters = 1;
+    const int kLockedWaiters = 2;
+
+    std::atomic<int> state_;
+}
+\end{lstlisting} 
 
 \end{document}
