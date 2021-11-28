@@ -65,6 +65,23 @@
   literate={~} {$\sim$}{1}
 }
 
+\lstset{language=Haskell,
+  aboveskip=1mm,
+  belowskip=1mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  literate={~} {$\sim$}{1}
+}
+
 \pagestyle{headings}
 \author{Lectured by Azalea Raad and Alastair Donaldson}
 \title{The Theory \& Practice of Concurrent Programming}
@@ -1010,6 +1027,180 @@ private:
 
     std::atomic<int> state_;
 }
+\end{lstlisting} 
+
+\section{Concurrency in Haskell}
+
+\subsection{Thread}
+
+\begin{lstlisting}[Haskell]
+import Control.Concurrent
+-- forkIO :: IO () -> IO ThreadId
+import Control.Monad
+import System.IO
+
+putChars :: Char -> Int -> IO ()
+putChars _ 0 = return ()
+putChars c n = do
+    putChar c
+    putChars c (n - 1)
+
+main = do
+    hSetBuffering stdout NoBuffering
+    forkIO (putChars 'B' 10000)
+    putChars 'A' 10000
+\end{lstlisting} 
+
+\subsection{Join Thread}
+
+\begin{lstlisting}[Haskell]
+-- newMVar :: a -> IO (MVar a)
+-- counter <- newMVar 0
+-- counter :: MVar Integer
+
+-- newEmptyMVar :: IO (MVar a)
+-- handle <- newEmptyMVar
+-- handle <- Any
+
+-- takeMVar :: MVar a -> IO a
+-- putMVar  :: MVar a -> a -> IO ()
+-- readMVar :: MVar a -> IO a
+-- () is a Unit type, which has exactly one value - () itself.
+
+import Control.Concurrent
+import Control.Monad
+import System.IO
+
+thread1 :: MVar () -> IO ()
+thread1 handle = do
+    print "I am thread 1"
+    putMVar handle ()
+
+thread2 :: MVar () -> IO ()
+thread2 handle = do
+    print "I am thread 2"
+    putMVar handle ()
+
+main = do
+    hSetBuffering stdout NoBuffering
+    handle1 <- newEmptyMVar
+    handle2 <- newEmptyMVar
+    forkIO (thread1 handle1)
+    forkIO (thread2 handle2)
+    takeMVar handle1
+    takeMVar handle2
+\end{lstlisting} 
+
+\subsection{Mutual Exclusion}
+
+\begin{lstlisting}[Haskell]
+import Control.Concurrent
+import Control.Monad
+import System.IO
+
+printProtected :: MVar () -> String -> IO ()
+printProtected mutex message = do
+    putMVar mutex ()
+    print message
+    takeMVar mutex
+
+thread1 :: MVar () -> MVar () -> IO ()
+thread1 mutex handle = do
+    printProtected mutex "I'm"
+    printProtected mutex "thread1"
+    putMVar handle ()
+
+thread2 :: MVar () -> MVar () -> IO ()
+thread2 mutex handle = do
+    printProtected mutex "!I'm"
+    printProtected mutex "!thread2"
+    putMVar handle ()
+
+main = do
+    hSetBuffering stdout NoBuffering
+    handle1 <- newEmptyMVar
+    handle2 <- newEmptyMVar
+    mutex <- newEmptyMVar
+    forkIO (thread1 mutex handle1)
+    forkIO (thread2 mutex handle2)
+    takeMVar handle1
+    takeMVar handle2
+\end{lstlisting} 
+
+\subsection{Messasge Passing -- Producer-Consumer}
+
+\begin{lstlisting}[Haskell]
+import Control.Concurrent
+import Control.Monad
+import System.IO
+
+-- producer put elem one-by-one to let consumer consume
+sendToConsumers :: MVar Int -> Int -> IO ()
+sendToConsumers _ 0 = return ()
+sendToConsumers p2c n = do
+    putMVar p2c 1
+    sendToConsumers p2c (n - 1)
+
+-- get all processed elems from c2p and return the number
+getFromConsumers :: MVar Int -> Int -> IO Int
+getFromConsumers _ 0 = return 0
+getFromConsumers c2p n = do
+    val <- takeMVar c2p
+    theRest <- getFromConsumers c2p (n - 1)
+    return (val + theRest)
+
+-- send elems to consumers via p2c,
+-- collect the processed ones back via c2p,
+-- and eventually put the total number of consumption into the result
+producer :: MVar Int -> MVar Int -> Int -> Int -> MVar Int -> IO ()
+producer p2c c2p numElems numConsumers result = do
+    sendToConsumers p2c numElems
+    combinedConsumerValues <- getFromConsumers c2p numConsumers
+    putMVar result combinedConsumerValues
+
+-- consume n data from p2c and return them
+consumeData :: MVar Int -> Int -> IO Int
+consumeData _ 0 = return 0
+consumeData p2c n = do
+    val <- takeMVar p2c
+    rest <- consumeData p2c (n - 1)
+    return (val + rest)
+
+-- put the result of consumption into c2p
+consumer :: MVar Int -> MVar Int -> Int -> MVar () -> IO ()
+consumer p2c c2p numElems handle = do
+    myResult <- consumeData p2c numElems
+    putMVar c2p myResult
+    putMVar handle ()
+
+main = do
+    args <- getArgs
+    let numConsumers = read (args!!0) :: Int
+    let elemsPerConsumer = read (args!!1) :: Int
+
+    p2c <- newEmptyMVar
+    c2p <- newEmptyMVar
+    -- mapM :: Monad m => (a -> m b) -> [a] -> m [b]
+    -- mapM_ :: Monad m => (a -> m b) -> [a] -> m ()
+    
+    -- Create an MVar per consumer to serve as a handle
+    consumerHandles <- mapM (\_ -> newEmptyMVar) [1..numConsumers]
+
+    -- Fork a producer
+    producerResult <- newEmptyMVar
+    forkIO (producer p2c c2p (numConsumers * elemsPerConsumer) numConsumers producerResult)
+
+    -- Fork numConsumers consumers
+    mapM_ (\handle -> forkIO (consumer p2c c2p elemsPerConsumer handle)) consumerHandles
+
+    -- Join the consumers (not strictly needed)
+    mapM_ takeMVar consumerHandles
+
+    -- Join the producer
+    result <- takeMVar producerResult
+    
+    -- Print the final result
+    print result
 \end{lstlisting} 
 
 \end{document}
