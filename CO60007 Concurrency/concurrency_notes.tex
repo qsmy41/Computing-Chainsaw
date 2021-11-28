@@ -1203,4 +1203,44 @@ main = do
     print result
 \end{lstlisting} 
 
+\subsection{Linked List}
+
+\begin{lstlisting}[Haskell]
+import Control.Concurrent
+import Control.Monad
+import System.IO
+import System.Environment
+
+type Stream a = MVar (Item a)
+
+data Item a =
+    Item a      -- the value
+        (Stream a)  -- the rest
+
+data Channel a =
+    Channel (Mvar (Stream a))
+            (Mvar (Stream a))
+
+newChannel :: IO (Channel a)
+newChannel = do
+    hole <- newEmptyMVar
+    readEnd <- newMVar hole
+    writeEnd <- newMVar hole
+    return (Channel readEnd writeEnd)
+
+readChannel :: Channel a -> IO a
+readChannel (Channel readEndPtr _) = do
+    readEnd <- takeMVar readEndPtr
+    Item value theRest <- takeMVar readEnd
+    putMVar readEndPtr theRest
+    return value
+
+writeChannel :: Channel a -> a -> IO ()
+writeChannel (Channel _ writeEndptr) value = do
+    writeEnd <- takeMVar writeEndptr
+    newHole <- newEmptyMVar
+    putMVar writeEnd (Item value newHole)
+    putMVar writeEndptr newHole
+\end{lstlisting} 
+
 \end{document}
