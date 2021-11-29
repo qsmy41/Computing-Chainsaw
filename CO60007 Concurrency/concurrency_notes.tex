@@ -1029,6 +1029,7 @@ private:
 }
 \end{lstlisting} 
 
+\newpage
 \section{Concurrency in Haskell}
 
 \subsection{Thread}
@@ -1242,5 +1243,139 @@ writeChannel (Channel _ writeEndptr) value = do
     putMVar writeEnd (Item value newHole)
     putMVar writeEndptr newHole
 \end{lstlisting} 
+
+\newpage
+\section{Dynamic Data Race Detection (Vector Clock-based)}
+
+\subsection{Definitions and Assumptions}
+
+\begin{itemize}
+    \item $N$: maximum number of threads tracked by algorithm.
+    \item $\left\{0,1,\ldots,N - 1\right\}$: set of thread ids, denoting
+        \emph{Threads}.
+    \item Synchronisation is via a set of locks, denoting \emph{Locks}.
+    \item \emph{Locations} is a set of possibly-shared memory locations.
+    \item \underline{Logical clock} $\in\mathbb{N}$: increases each time the
+        thread releases a mutex.
+    \item \underline{Vector clock} $V\triangleq (c_0,c_1,\ldots,c_{N-1})$: 
+        a tuple of $N$ logical clocks, where
+        \[
+            V(t)=c_t.
+        \]
+    \item \emph{VC} is the set of all vector clocks.
+    \item \underline{Bottom vector clock} $\bot \triangleq(0,0,\ldots,0)$.
+    \item \underline{Partial order on $V$}:
+        \[
+            V_1\sqsubseteq V_2 \iff \forall t.V_1(t)\le V_2(t).
+        \]
+    \item \underline{Join of vector clocks}:
+        \[
+            V_1\sqcup V_2 = \text{pointwise maximum of $V_1$ and $V_2$}.
+        \]
+    \item \underline{Increment}:
+        \[
+            \text{inc}_t(V)=V[t\mapsto V(t)+1].
+        \]
+\end{itemize} 
+
+\subsection{Vector Clock Algorithm State}
+
+\begin{itemize}
+    \item $C:\text{\emph{Threads}}\mapsto\text{\emph{VC}}$
+        \begin{itemize}
+            \item $C_t$: shorthand for $C(t)$, represents what thread $t$ knows
+                about the \emph{VC}.
+            \item $C_t(t)$ is $t$'s logical clock.
+            \item For $u\neq t$, $C_t(u)=z$ means ``thread $t$ knows that thread
+                $u$'s logical clock is at least $z$.
+            \item When $t$ acquires a lock, $t$ gets information about the
+                logical clocks of threads who previously held the lock.
+        \end{itemize} 
+    \item $L:\text{\emph{Locks}}\mapsto\text{\emph{VC}}$
+        \begin{itemize}
+            \item $L_m$: shorthand for $L(m)$, represents the logical clock each
+                thread has last time it released $m$.
+            \item $L_m(t)=0$ means that $t$ has never released $m$.
+            \item Otherwise $L_m(t)$ was $t$'s logical clock last time $t$
+                releases $m$.
+        \end{itemize} 
+    \item $R:\text{\emph{Location}}\mapsto\text{\emph{VC}}$
+        \begin{itemize}
+            \item $R_x$: shorthand for $R(x)$, represents the logical clock each
+                thread had last time it read from $x$.
+            \item $R_x(t)=0$ means that $t$ has never read from $x$.
+            \item Otherwise $R_x(t)$ was $t$'s logical clock last time $t$
+                read from $x$.
+        \end{itemize} 
+    \item $W:\text{\emph{Location}}\mapsto\text{\emph{VC}}$
+        \begin{itemize}
+            \item $W_x$: shorthand for $W(x)$, represents the logical clock each
+                thread had last time it wrote to $x$.
+            \item $W_x(t)=0$ means that $t$ has never written to $x$.
+            \item Otherwise $W_x(t)$ was $t$'s logical clock last time $t$
+                wrote to $x$.
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Initial Analysis State}
+
+\begin{itemize}
+    \item
+        $C=\left(\text{inc}_0(\bot),\text{inc}_1(\bot),\ldots,\text{inc}_{N-1}(\bot)\right)$
+    \item $L=\lambda\, m.\bot$
+    \item $R=\lambda\, x.\bot$
+    \item $W=\lambda\, x.\bot$
+\end{itemize} 
+
+\subsection{Intercepted Operations}
+
+\begin{itemize}
+    \item \texttt{rd(t, x)}: interception of a read by thread $t$ 
+        from possibly-shared memory location $x$.
+        \[
+            \frac{W_x\sqsubseteq C_t\qquad
+            R'=R[x\mapsto R_x[t\mapsto C_t(t)]]}
+            {(C,L,R,W)\xrightarrow{\texttt{rd(t,x)}}(C,L,R',W)}
+        \]
+    \item \texttt{wr(t, x)}: interception of a write by thread $t$ 
+        to possibly-shared memory location $x$.
+        \[
+            \frac{W_x\sqsubseteq C_t\qquad
+                R_x\sqsubseteq C_t \qquad
+            W'=W[x\mapsto W_x[t\mapsto C_t(t)]]}
+            {(C,L,R,W)\xrightarrow{\texttt{wr(t,x)}}(C,L,R,W')}
+        \]
+    \item \texttt{acq(t, m)}: interception of an acquire of $m$ by $t$.
+        \[
+            \frac{C'=C[t\mapsto (C_t\sqcup L_m)]}
+            {(C,L,R,W)\xrightarrow{\texttt{acq(t,m)}}(C',L,R,W)}
+        \]
+    \item \texttt{rel(t, m)}: interception of a release of $m$ by $t$.
+        \[
+            \frac{L'=L[m\mapsto C_t]\qquad
+            C'=C[t\mapsto \text{inc}_t(C_t)]}
+            {(C,L,R,W)\xrightarrow{\texttt{rel(t,m)}}(C',L',R,W)}
+        \]
+\end{itemize} 
+
+\subsection{Race Rules}
+
+\begin{itemize}
+    \item Write-Read race rule:
+        \[
+            \frac{\exists u\, .W_x(u)>C_t(u)}
+        {(C,L,R,W)\xrightarrow{\texttt{rd(t,x)}}\text{WriteReadRace}(u,t,x)}
+        \]
+    \item Write-Write race rule:
+        \[
+            \frac{\exists u\, .W_x(u)>C_t(u)}
+            {(C,L,R,W)\xrightarrow{\texttt{wr(t,x)}}\text{WriteWriteRace}(u,t,x)}
+        \]
+    \item Read-Write race rule:
+        \[
+            \frac{\exists u\, .R_x(u)>C_t(u)}
+            {(C,L,R,W)\xrightarrow{\texttt{wr(t,x)}}\text{ReadWriteRace}(u,t,x)}
+        \]
+\end{itemize} 
 
 \end{document}
