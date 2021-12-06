@@ -82,6 +82,32 @@
   literate={~} {$\sim$}{1}
 }
 
+\lstdefinelanguage{Rust} {
+  morekeywords={
+      use, fn, let, mut, for, in, struct,
+      return, true, false, self,
+  },
+  sensitive=true,
+  morecomment=[l]{//},
+  morestring=[b]"
+}
+\lstset{language=Rust,
+  aboveskip=1mm,
+  belowskip=1mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  literate={~} {$\sim$}{1}
+}
+
 \pagestyle{headings}
 \author{Lectured by Azalea Raad and Alastair Donaldson}
 \title{The Theory \& Practice of Concurrent Programming}
@@ -1243,6 +1269,275 @@ writeChannel (Channel _ writeEndptr) value = do
     putMVar writeEnd (Item value newHole)
     putMVar writeEndptr newHole
 \end{lstlisting} 
+
+\newpage
+\section{Concurrency in Rust}
+
+\subsection{Basics}
+\begin{lstlisting}[Rust]
+struct Point {
+    x: u32,
+    y: u32,
+}
+
+fn show(p: &Point) {
+    println!("({}, {})", p.x, p.y);
+}
+
+fn scale(p: &mut Point, factor: u32) {
+    p.x *= factor;
+    p.y *= factor;
+}
+
+fn main() {
+    let mut p = Point{x: 1, y: 2};
+    show(&p);
+    scale(&mut p, 10);
+    show(&p);
+}
+\end{lstlisting} 
+
+\subsection{Threading with mutex}
+\begin{lstlisting}[Rust]
+use std::thread;
+use std::sync::{Arc, Mutex};
+
+fn main() {
+    let max = 16777216;
+    
+    let mut data = Vec::<u32>::new();
+    for _ in 0..max {
+        data.push(1);
+    }
+    // maintain atomic reference count (Arc) to data
+    let data_arc = Arc::new(data);
+
+    let data_arc_t1 = data_arc.clone(); // increase count by 1
+    let data_arc_t2 = data_arc.clone();
+
+    // mutex protects a specific object
+    // Interior mutability: 
+    // allow mutating wrapped data only if free of data races
+    let result_arc = Arc::new(Mutex:new(0));
+    let result_arc_t1 = result_arc.clone();
+    let result_arc_t2 = result_arc.clone();
+
+    // thread borrows by default
+    // child thread can outlive parent thread, thus borrowing not safe
+    // use move instead of borrow
+    let t1 = thread::spawn(move || {
+        let mut result: u32 = 0;
+        for i in 0..max / 2 {
+            result += data_arc_t1[i];
+        }
+        let mut guard = result_arc_t1.lock().unwrap();
+        *guard += result;
+    });
+
+    let t2 = thread::spawn(move || {
+        let mut result: u32 = 0;
+        for i in max / 2..max {
+            result += data_arc_t2[i];
+        }
+        let mut guard = result_arc_t2.lock().unwrap();
+        *guard += result;
+    });
+
+    t1.join().unwrap();
+    t2.join().unwrap();
+
+    println("{}", result_arc.lock().unwrap());
+}
+\end{lstlisting} 
+
+\subsection{Threading with Atomics}
+\begin{lstlisting}[Rust]
+use std::thread;
+
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+fn main() {
+    let max = 16777216;
+    
+    let mut data = Vec::<u32>::new();
+    for _ in 0..max {
+        data.push(1);
+    }
+    let data_arc = Arc::new(data);
+
+    let data_arc_t1 = data_arc.clone(); // increase count by 1
+    let data_arc_t2 = data_arc.clone();
+
+    let result_arc = Arc::new(AtomicU32::new(0));
+    let result_arc_t1 = result_arc.clone();
+    let result_arc_t2 = result_arc.clone();
+
+    // thread borrows by default
+    // child thread can outlive parent thread, thus borrowing not safe
+    // use move instead of borrow
+    let t1 = thread::spawn(move || {
+        let mut result: u32 = 0;
+        for i in 0..max / 2 {
+            result += data_arc_t1[i];
+        }
+        result_arc_t1.fetch_add(result, Ordering::SeqCst);
+    });
+
+    let t2 = thread::spawn(move || {
+        let mut result: u32 = 0;
+        for i in max / 2..max {
+            result += data_arc_t2[i];
+        }
+        result_arc_t2.fetch_add(result, Ordering::SeqCst);
+    });
+
+    t1.join().unwrap();
+    t2.join().unwrap();
+
+    println("{}", result_arc.load(Ordering::SeqCst));
+}
+\end{lstlisting}
+
+\subsection{Striped Hashset}
+\begin{lstlisting}[Rust]
+use std::collections::hash_map::DefaultHasher
+use std::cmp::Eq;
+use std::hash::{Hash, Hasher};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+pub struct StripedHashSet<T: ToString + Eq + Hash> {
+    bucket_groups: Vec<Mutex<Vec<Vec<T>>>>,
+    size: AtomicUsize,
+    num_buckets: AtomicUsize,
+}
+
+imp<T: ToString + Eq + Hash> StripedHashSet<T> {
+    pub fn new(capacity: usize) -> Self {
+        let mut bucket_groups = Vec::new();
+        for _ in 0..capacity {
+            let mut bucket_group = Vec::new();
+            bucket_group.push(Vec::new());
+            bucket_groups.push(Mutex::new(bucket_group));
+        }
+        return StripedHashSet {
+            bucket_groups,
+            size: AtomicUsize::new(0),
+            num_buckets: AtomicUsize::new(capacity),
+        }
+    }
+
+    pub fn add (&self, elem: T) -> bool {
+        {
+            let mut hasher = DefaultHasher::new();
+            elem.hash(&mut hasher);
+            let hashcode : usize = hasher.finish() as usize;
+
+            let bucket_group_index = hashcode % self.bucket_groups.len();
+            let mut bucket_group_guard = self.bucket_groups[bucket_group_index].lock().unwrap();
+            let bucket_index = hashcode % bucket_group_guard.len();
+
+            if bucket_group_guard[bucket_index].contains(&elem) {
+                return false;
+            }
+            bucket_group_guard[bucket_index].push(elem);
+            self.self.size.fetch_add(1, Ordering::SeqCst);
+        }
+        if result && self.policy() {
+            self.resize();
+        }
+        return true;
+    }
+
+    pub fn remove (&self, elem: T) -> bool {
+        let mut hasher = DefaultHasher::new();
+        elem.hash(&mut hasher);
+        let hashcode : usize = hasher.finish() as usize;
+
+        let bucket_group_index = hashcode % self.bucket_groups.len();
+        let mut bucket_group_guard = self.bucket_groups[bucket_group_index].lock().unwrap();
+        let bucket_index = hashcode % bucket_group_guard.len();
+        for i in 0..bucket_group_guard[bucket_index].len() {
+            if elem == bucket_group_guard[bucket_index][i] {
+                bucket_group_guard[bucket_index].swap_remove(i);
+                self.size.fetch_sub(1, Ordering::SeqCst);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn policy (&self) -> bool {
+        return self.size.load(Ordering::SeqCst) / self.num_buckets.load(Ordering::SeqCst) > 4;
+    }
+
+    fn resize (&self) {
+        // get all the mutices - put the resulting guards into a vector
+        let mut guards = Vec::new();
+        for i in 0..self.bucket_groups.len() {
+            guards.push(self.bucket_groups[i]).lock().unwrap();
+        }
+
+        if !self.policy() {
+            return;
+        }
+
+        // we will put all the data in the hash set here
+        let mut data = Vec::new(); 
+        for i in 0..guards.len() {
+            for j in 0..guards[i].len() {
+                while !guards[i][j].isEmpty() {
+                    data.push(guards[i][j].swap_remove(0));
+                }
+            }
+            let buckets_per_group = guards[i].len();
+            for _ in 0..buckets_per_group {
+                guards[i].push(Vec::new());
+            }
+        }
+
+        // now redistribute the data into the hash set
+        while !data.is_empty() {
+            let elem = data.swap_remove(0);
+
+            let mut hasher = DefaultHasher::new();
+            elem.hash(&mut hasher);
+            let hashcode : usize = hasher.finish() as usize;
+
+            let bucket_group_index = hashcode % self.bucket_groups.len();
+            let bucket_index = hashcode % guards[bucket_group_index].len();
+
+            guards[bucket_group_index][bucket_index].push(elem);
+        }
+
+        // update the number of buckets
+        self.num_buckets.store(self.num_buckets.load(Ordering::SeqCst) * 2, Ordering::SeqCst);
+    }
+}
+
+impl <T: ToString + Eq + Hash> ToString for StripedHashSet<T> {
+    fn to_string(&self) -> String {
+        let mut result: String = "[".to_owned();
+        let mut first = true;
+
+        for i in 0..self.bucket_groups.len() {
+            let guard = self.bucket_groups[i].lock().unwrap();
+            for j in 0..guard.len() {
+                for k in 0..guard[j].len() {
+                    if !first {
+                        result.push_str(", ");
+                    }
+                    first = false;
+                    result.push_str(guard[j][k].to_string());
+                }
+            }
+        }
+        result.push_str("]");
+        return result;
+    }
+}
+\end{lstlisting}
 
 \newpage
 \section{Dynamic Data Race Detection (Vector Clock-based)}
