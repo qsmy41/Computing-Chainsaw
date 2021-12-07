@@ -65,49 +65,6 @@
   literate={~} {$\sim$}{1}
 }
 
-\lstset{language=Haskell,
-  aboveskip=1mm,
-  belowskip=1mm,
-  showstringspaces=false,
-  columns=flexible,
-  basicstyle={\small\ttfamily},
-  numbers=none,
-  numberstyle=\tiny\color{gray},
-  keywordstyle=\color{blue},
-  commentstyle=\color{dkgreen},
-  stringstyle=\color{mauve},
-  breaklines=true,
-  breakatwhitespace=true,
-  tabsize=3,
-  literate={~} {$\sim$}{1}
-}
-
-\lstdefinelanguage{Rust} {
-  morekeywords={
-      use, fn, let, mut, for, in, struct,
-      return, true, false, self,
-  },
-  sensitive=true,
-  morecomment=[l]{//},
-  morestring=[b]"
-}
-\lstset{language=Rust,
-  aboveskip=1mm,
-  belowskip=1mm,
-  showstringspaces=false,
-  columns=flexible,
-  basicstyle={\small\ttfamily},
-  numbers=none,
-  numberstyle=\tiny\color{gray},
-  keywordstyle=\color{blue},
-  commentstyle=\color{dkgreen},
-  stringstyle=\color{mauve},
-  breaklines=true,
-  breakatwhitespace=true,
-  tabsize=3,
-  literate={~} {$\sim$}{1}
-}
-
 \pagestyle{headings}
 \author{Lectured by Azalea Raad and Alastair Donaldson}
 \title{The Theory \& Practice of Concurrent Programming}
@@ -1055,6 +1012,23 @@ private:
 }
 \end{lstlisting} 
 
+\lstset{language=Haskell,
+  aboveskip=1mm,
+  belowskip=1mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  literate={~} {$\sim$}{1}
+}
+
 \newpage
 \section{Concurrency in Haskell}
 
@@ -1269,6 +1243,32 @@ writeChannel (Channel _ writeEndptr) value = do
     putMVar writeEnd (Item value newHole)
     putMVar writeEndptr newHole
 \end{lstlisting} 
+
+\lstdefinelanguage{Rust} {
+  morekeywords={
+      use, fn, let, mut, for, in, struct,
+      return, true, false, self,
+  },
+  sensitive=true,
+  morecomment=[l]{//},
+  morestring=[b]"
+}
+\lstset{language=Rust,
+  aboveskip=1mm,
+  belowskip=1mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  literate={~} {$\sim$}{1}
+}
 
 \newpage
 \section{Concurrency in Rust}
