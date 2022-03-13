@@ -12,6 +12,7 @@
 \usepackage{authblk} % for writing affiliations
 \usepackage{graphicx} % for importing images
 \graphicspath{{./images/}} % for the path to images, also always put label behind captions
+\usepackage{subfig}
 \usepackage{textcomp} % for using degree symbol
 \usepackage{hyperref} % for clickable link in the pdf & customizable reference text
 \usepackage[all]{hypcap} % for clickable link to images instead of caption
@@ -410,7 +411,8 @@ For an orthographic projection, with the projection plane at $z=0$, we can use
         and to test whether the fragment survives to become a pixel 
         (depth, alpha, etc.)
     \item Eventually, one or more fragments are merged to become a
-        \underline{\textbf{pixel}}.
+        \underline{\textbf{pixel}}, which is the smallest addressable element
+        in a raster image.
     \item To prevent from exposing the process of gradual screening of the
         primitives, double buffering is used so that 
         the rasterization takes place in a special memory,
@@ -658,7 +660,7 @@ This is the \emph{programmable} part of the graphics pipeline.
 
 \section{Color}
 
-\subsection{CIE Color Space}
+\subsection{RGB CIE Color Space}
 
 \begin{itemize}
     \item a standard normalized representation of colors
@@ -727,6 +729,331 @@ This is the \emph{programmable} part of the graphics pipeline.
     \item \underline{\textbf{Hue}} corresponds notionally to pure color
     \item \underline{\textbf{Saturation}} is the proportion of pure color
     \item \underline{\textbf{Value}} is the brightness/intensity
+    \item We can visualize the perceptual color space in HSV as in Figure
+        \ref{fig:hsv}.
+        \begin{figure}
+            \centering
+            \subfloat[][The conical representation of the HSV model]{ 
+                \includegraphics[scale=0.55]{hsv1.png}
+            }
+            \subfloat[][The HSV color wheel]{ 
+                \includegraphics[scale=0.55]{hsv2.png}
+            }
+          	\caption{HSV model}\label{fig:hsv}
+        \end{figure}
+    \item Conversion between RGB and HSV can be done as
+        \begin{align*}
+            V & = \text{max}(r, g, b) \\
+            S & = \frac{\text{max}(r,g,b)-\text{min}(r,g,b)}{\text{max}(r,g,b)}\\
+            H & = 
+            \begin{cases}
+                \text{undefined} & r=g=b \\
+                120\cdot \dfrac{g-b}{(r-b)+(g-b)} & (r>b)\wedge(g>b) \\[8px]
+                120 + 120\cdot \dfrac{b-r}{(g-r)+(b-r)} & (g>r)\wedge(b>r) \\[8px]
+                240 + 120\cdot \dfrac{r-g}{(r-g)+(b-g)} & (r>g)\wedge(b>g)
+            \end{cases} 
+        \end{align*} 
+\end{itemize} 
+
+\subsection{Transparancy}
+
+We can model transparency with an $\alpha$ channel, with
+\begin{itemize}
+    \item transparent: $\alpha=0$
+    \item semi-transparent: $0<\alpha<1$
+    \item opaque: $\alpha=1$
+\end{itemize} 
+Suppose that we put $A$ over $B$ over background $G$,
+\begin{itemize}
+    \item How much of $B$ is blocked by $A$? $\alpha_A$
+    \item How much of $B$ shows through $A$? $(1-\alpha_A)$
+    \item How much of $G$ shows through both $A$ and $B$? $(1-\alpha_A)(1-\alpha_B)$
+    \item How much does $G$ contribute to the overall color?
+        $(1-\alpha_A)(1-\alpha_B)\alpha_G$
+\end{itemize} 
+
+
+\section{Texture}
+
+\subsection{Definition}
+
+\begin{itemize}
+    \item \underline{\textbf{Texture (map)}} is an image applied (mapped)
+        to the surface of a shape or polygon.
+    \item A texture can be 1D, 2D, or 3D, but 2D is the most common for visible
+        surfaces.
+    \item \underline{\textbf{Raster images}} are 2D rectangular matrices or grid
+        of square pixels, often used as textures.
+    \item \underline{\textbf{Procedural texture}} is a texture created using a
+        mathematical description rather than directly stored data 
+        (e.g. raster image). Mathematically, it is a function $f$ defiend as
+        \[
+            f:\mathbf{p}\mapsto\text{color},
+        \]
+        where $\mathbf{p}$ is a coordinate.
+        \begin{itemize}
+            \item[+] Very small memory footprint before the texture map is
+                generated. The ultimate way in image compression.
+            \item[+] No texture memory is really needed since generated ``on the
+                fly'' in a fragment shader, resulting in the exactly right level
+                of detail for each pixel on the screen.
+            \item[-] Hard to get a formula to get the exact/natural look.
+            \item[-] On-the-fly generation can take a lot of shader
+                program instructions, almost always slower than just
+                loading/looking up one.
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Photo Textures Mapping}
+
+\subsubsection{Mechanism}
+
+\begin{itemize}
+    \item Define a 2D coordinate system on an image mapped onto a 3D object.
+    \item For each fragment on an object's surface, work out what coordinate 
+        needs to be sampled in the image's 2D space to get the right color.
+    \item Conventionally, texture coordinates are denoted with $(s,t)$ 
+        (\emph{texture space}). Canonically it goes from (0,0) to (0,1).
+        The object surface is denoted with $(u,v)$ (\emph{object space}) 
+        and the pixel on the screen is denoted with $(x,y)$ (\emph{screen space}).
+        We need to define
+        \[
+            \text{\underline{\textbf{Parameterization}}}:(s,t)\mapsto(u,v)
+        \]
+        which is the process of finding parametric equations of textures and
+        objects so that texture can be mapped onto object surface, and
+        \[
+            \text{\underline{\textbf{Rendering}}}:(u,v)\mapsto(x,y)
+        \]
+        which is the process of generating an image from a model.
+\end{itemize} 
+
+\subsubsection{Parameterization}
+
+\begin{itemize}
+    \item \underline{Planar mapping}: ignore one of the coordinates
+    \item \underline{Cylindrical/Spherical mapping}: compare to
+        cylindrical/spherical coordinate systems
+    \item \underline{Box mapping}: 6 planar mapping
+    \item \underline{\textbf{Unwrapping}}: the process of creating manual
+        mapping
+\end{itemize} 
+
+\subsubsection{Texture Addressing (Mode)}
+
+What happens outside $[0,1]$?
+Following the order in Figure \ref{fig:texture_addressing},
+\begin{itemize}
+    \item \underline{static color}: we use a static color
+        (red in this case)
+    \item \underline{clamped}: we use the last color in the range
+    \item \underline{repeated}: wrap back to the first coordinate, repeating the
+        texture
+    \item \underline{mirrored}: similar to repeated, but go backwards insteads
+        after ending the texture
+\end{itemize} 
+
+\begin{figure}
+  	\includegraphics[scale=0.30]{texture_addressing.png}
+  	\centering
+  	\caption{Different texture addressing}\label{fig:texture_addressing}
+\end{figure}
+
+
+\subsection{Perspective Correct Interpolation}
+
+\begin{itemize}
+    \item cannot simply perform linear interpolation as in Gouraud shading on
+        texture coordinates
+    \item The problem:
+        \begin{itemize}
+            \item perspective projection \underline{\textbf{does not preserve}}
+                linear combinations of points
+            \item e.g. equal distances in 3D do not
+                map to equal distances in screen space, as shown in figure
+                \ref{fig:inter_err}.
+        \end{itemize} 
+        \begin{figure}
+          	\includegraphics[scale=0.55]{interpolation_error.png}
+          	\centering
+          	\caption{perspective interpolation error}\label{fig:inter_err}
+        \end{figure}
+    \item The solution: 
+        \begin{itemize}
+            \item Assume image plane is at $z=f=1$.
+            \item Let $t$ controls linear blend of texture coordinates of
+                $\mathbf{p}$ and $\mathbf{r}$ and let 
+                \[
+                    t_p=0,\; t_r=1.
+                \]
+            \item  Let $\text{lerp}(x,y)$
+                be the linear interpolation function, and as such
+                \[
+                    t_q=t_{q'}z_q=
+                    \frac{\text{lerp}(t_{p'},t_{r'})}{\frac{1}{z_q}}=
+                    \frac{\text{lerp}(\frac{t_p}{z_p},\frac{t_r}{z_r})}{\text{lerp}(\frac{1}{z_p},\frac{1}{z_r})}
+                \]
+        \end{itemize} 
+    \item The algorithm: given texture parameter $t$ at vertices,
+        \begin{enumerate}
+            \item compute $\frac{1}{z}$ for each vertex
+            \item linearly interpolate $\frac{1}{z}$ across the triangle
+            \item linearly interpolate $\frac{t}{z}$ across the triangle
+            \item perform perspective division via dividing $\frac{t}{z}$ by
+                $\frac{1}{z}$ to obtain $t$
+        \end{enumerate} 
+\end{itemize} 
+
+\subsection{Texture Mapping and Illumination}
+
+\begin{itemize}
+    \item For texture-mapped object, changing the lighting will not show the
+        unevenness of the object's surface.
+    \item \underline{\textbf{Bump mapping}}: textures to alter the surface
+        normal of an object. Shading on the object is changed, but its
+        silhouette is not.
+    \item \underline{\textbf{Displacement mapping}}: textures to change the
+        shading of both the object and its silhouette. It actually moves the
+        surface point --- geometry is displaced before determining visibility.
+    \item \underline{\textbf{Environment mapping}}: we can simulate reflections
+        by using the direction of the reflected ray to index a spherical texture
+        map at ``infinity''.
+\end{itemize} 
+
+\section{Rasterization, Visibility, and Anti-aliasing}
+
+\subsection{Background}
+
+\begin{itemize}
+    \item \underline{\textbf{Rasterization}} determines which pixels are drawn
+        into the framebuffer.
+    \item Pixels have unique framebuffer location, but multiple fragments can be
+        at the same address.
+    \item \underline{\textbf{Alias effects}}: an unreal visual artefacts 
+        caused by undersampling e.g. straight lines look jagged.
+\end{itemize} 
+
+\subsection{Barycentric Coordinates}
+
+\begin{itemize}
+    \item let vertices of a triangle be $\mathbf{a}$, $\mathbf{b}$, and $\mathbf{c}$,
+        then any point $\mathbf{p}$ can be specified in the plane as
+        \begin{align*}
+            \mathbf{p}
+            &=\mathbf{a}+\beta(\mathbf{b}-\mathbf{a})+\gamma(\mathbf{c}-\mathbf{a})
+            =(1-\beta-\gamma)\mathbf{a}+\beta \mathbf{b}+\gamma \mathbf{c} \\
+            &=\alpha \mathbf{a}+\beta \mathbf{b}+\gamma \mathbf{c},
+        \end{align*} 
+        and $(\alpha,\beta,\gamma)$ is called (absolute) barycentric coordinates.
+    \item If $\mathbf{p}$ is inside the triangle
+        $(\mathbf{a},\mathbf{b},\mathbf{c})$, we have $0<\alpha,\beta,\gamma<1$;
+        if $\mathbf{p}$ is on an edge, one coefficient is 0;
+        if $\mathbf{p}$ is on a vertex, one coefficient is 1.
+    \item Since implicit equation in 2D is defined as
+        \[
+            f(x,y)=Ax+By+c=0
+        \]
+        and an implicit line through $(x_a,y_a)$ and $(x_b,y_b)$ is
+        \[
+            f_{ab}(x,y)=(y_a-y_b)x+(x_b-x_a)y+x_ay_b-x_by_a=0,
+        \]
+        note that a barycentric coordinate such as $\beta$ is a
+        \underline{\textbf{signed distance}} from a line 
+        (in this case, the line through $\mathbf{a}$ and $\mathbf{c}$),
+        and we can use implicit line equations to evaluate the signed distance,
+        we have
+        \[
+            \frac{f_{ac}(x_b,y_b)}{f_{ac}(x,y)}=\frac{1}{\beta}
+            \Longrightarrow
+            \beta=\frac{f_{ac}(x,y)}{f_{ac}(x_b,y_b)}
+        \]
+        and we can obtain similar results for $\alpha$ and $\gamma$, thereby
+        computing the barycentric coordinates with the given cartesian coordinates.
+    \item In general, the barycentric coordinates for $\mathbf{p}$ are the
+        solution of the linear system
+        \[
+            \begin{pmatrix}
+                x_a & x_b & x_c \\
+                y_a & y_b & y_c \\
+                1 & 1 & 1
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \alpha \\
+                \beta \\
+                \gamma
+            \end{pmatrix} 
+            =
+            \begin{pmatrix}
+                x \\
+                y \\
+                1
+            \end{pmatrix} 
+        \]
+    \item Let $a,b,c$ be the side lengths of the triangle,
+        from barycentric to trilinear coordinates:
+        \[
+            (\alpha,\beta,\gamma)\mapsto(\frac{\alpha}{a},\frac{\beta}{b},\frac{\gamma}{c}),
+        \]
+        from trilinear to barycentric coordinates:
+        \[
+            (t_1,t_2,t_3)\mapsto(t_1a,t_2b,t_3c)
+        \]
+    \item \underline{\textbf{Triangle Rasterization}}:
+        we can check if ($0<\alpha,\beta,\gamma<1$) to determine if
+        a fragment of a triangle should be generated.
+\end{itemize} 
+
+\subsection{Visibility}
+
+\begin{itemize}
+    \item \underline{\textbf{Painter's algorithm}}: sort the triangles using the
+        $z$ values in camera space and draw them from back to front.
+        \begin{itemize}
+            \item[-] not efficient due to costly sorting
+            \item[-] suffer from correctness issues such as intersections,
+                cycles, etc.
+        \end{itemize} 
+    \item \underline{\textbf{depth buffer (z-buffer)}}: perform hidden surface
+        removal per-fragment by saving the $z$ value for each fragment and keep
+        only the fragment with the smallest $z$ value at each pixel. Use
+        \underline{\emph{z-buffer (2D buffer)}} of the same size as image to
+        save $z$ values.
+        \begin{itemize}
+            \item[+] facilitates hardware implementation
+            \item[+] handles intersections and cycles
+            \item[+] draw opaque polygons in any order
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Anti-aliasing}
+
+\begin{itemize}
+    \item apply a degree of blurring to the boundary such that the
+        aliasing effect is reduced.
+    \item \underline{\textbf{Supersampling}}
+        \begin{enumerate}
+            \item Compute the picture at a high resolution to that of the
+                display area.
+            \item Supersamples are averaged to find the pixel value.
+            \item This blurs the boundaries and leaves the coherent areas of
+                color unchanged.
+        \end{enumerate} 
+    \item \underline{\textbf{Convolution filtering}}: use a filter that takes a
+        (weighted) average over a small region around the pixel to blur the
+        image, such as
+        \[
+            \frac{1}{36}
+            \begin{pmatrix}
+                1 & 4 & 1 \\
+                4 & 16 & 4 \\
+                1 & 4 & 1
+            \end{pmatrix} 
+        \]
+        \begin{itemize}
+            \item[+] very fast, can be done in hardware
+            \item[+] generally applicable
+            \item[-] degrade the image while enhancing its visual appearance
+        \end{itemize} 
 \end{itemize} 
 
 \end{document}
