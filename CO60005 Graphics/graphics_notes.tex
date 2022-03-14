@@ -1056,4 +1056,718 @@ Following the order in Figure \ref{fig:texture_addressing},
         \end{itemize} 
 \end{itemize} 
 
+
+\section{Ray Tracing}
+
+\subsection{Introduction}
+
+\begin{itemize}
+    \item \underline{\textbf{Direct illumination}}: a surface point receives
+        light directly from all light sources in the scene.
+    \item \underline{\textbf{Global illumination}}: a surface point receives
+        light after the light rays interact with other objects in the scene. 
+        \begin{itemize}
+            \item points may be in shadow
+            \item rays may refract through transparent material
+            \item computed by reflection and transmission rays
+        \end{itemize} 
+    \item Ray tracing pros and cons
+        \begin{itemize}
+            \item[+] Easy to implement
+            \item[+] extends well to global illumination, such as shadows,
+                reflections/refractions, etc.
+            \item[-] speed --- seconds/frame, instead of frames/second
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Basic Ray Tracing Algorithm}
+
+\begin{enumerate}
+    \item cast one ray per pixel
+    \item\label{rt-step-2} compute nearest intersection with an object in the scene
+    \item check if the ray from the intersection point to the light source is
+        occluded
+        \begin{itemize}
+            \item if occlusion happens, stop tracing
+            \item if no occlusion, compute color at the intersection point,
+                update ray to be the next ray to be traced, and go back to step \ref{rt-step-2}.
+        \end{itemize} 
+\end{enumerate} 
+
+\subsection{Mathematical Computations}
+
+\subsubsection{Reflected Ray}
+
+Givne that $\mathbf{v}$ is the primary ray, $\mathbf{n}$ is the unit surface
+normal, we can compute the reflected ray $\mathbf{v}'$ as
+\[
+    \mathbf{v}'=\mathbf{v}-(2\mathbf{v}\cdot\mathbf{n})\mathbf{n}.
+\]
+
+\subsubsection{Color computation}
+
+We can compute color/shadow as
+\[
+    L = k_a+s\left[k_d(\mathbf{n}\times \mathbf{l})
+    +k_s{(\mathbf{v}\times \mathbf{r})}^{q}\right]I_s
+    +k_\text{reflected}L_\text{reflected}+k_\text{refracted}L_\text{refracted}
+\]
+where
+\[
+    s =
+    \begin{cases}
+        0 & \text{if light source is obscured} \\
+        1 & \text{if light souce is not obscured}.
+    \end{cases} 
+\]
+We can use multiple shadow rays to sample an area light source, allowing us to
+create \emph{soft shadows}.
+
+\subsubsection{Refraction}
+
+\begin{itemize}
+    \item The angle of the refracted ray can be determined by the Snell's law
+        \[
+            \eta_1\sin{\phi_1}=\eta_2\sin{\phi_2}
+        \]
+        where
+        \begin{itemize}
+            \item $\eta_1$ is the refractive index for medium 1
+            \item $\eta_2$ is the refractive index for medium 2
+            \item $\phi_1$ is the angle between the incident ray and the surface normal
+            \item $\phi_2$ is the angle between the refracted ray and the surface normal
+        \end{itemize} 
+    \item In vector notation Snell's law can be written as
+        \[
+            \eta_1(\mathbf{v}\cdot\mathbf{n})=\eta_2(\mathbf{v}'\cdot\mathbf{n})
+        \]
+        so that the direction of the refracted ray can be calculated as
+        \[
+            \mathbf{v}'=\frac{\eta_1}{\eta_2}
+            \left(
+                \left[
+                    \sqrt{{(\mathbf{n}\cdot\mathbf{v})}^{2}+{\left(\frac{\eta_2}{\eta_1}\right)}^{2}-1}
+                    -\mathbf{n}\cdot\mathbf{v}
+                \right]
+                \cdot\mathbf{n}+\mathbf{v}
+            \right)
+        \]
+    \item The equation only has a solution if
+        \[
+            {(\mathbf{n}\cdot\mathbf{v})}^{2}>1-{\left(\frac{\eta_2}{\eta_1}\right)}^{2}
+        \]
+        illustrating the physical phenomenon of the limiting angle
+        (possibility of \underline{\emph{total internal reflection}}).
+\end{itemize} 
+
+\subsubsection{Amount of reflection and refraction}
+
+To more accurately model the phenomenon of more reflection at grazing angle,
+use the Fresnel factor
+\[
+    L_\text{secondary} = k_\text{fresnel}L_\text{reflected} +
+    (1-k_\text{fresnel})L_\text{refracted}
+\]
+with Schlick's approximation
+\[
+    k_\text{fresnel}(\theta)=k_\text{fresnel}(0)+[1-k_\text{fresnel}(0)]{[1-(\mathbf{n}\cdot\mathbf{l})]}^{5}
+\]
+where $k_\text{fresnel}(0)$ is the Fresnel factor at zero degrees, and choosing
+$k_\text{fresnel}(0)=0.8$ make the object's material looks like stainless steel.
+
+\subsubsection{Intersection Calculation}
+
+Given that each primary ray could be expressed with
+\[
+    \mathbf{p}=\mathbf{p}_0+\mu\mathbf{d}
+\]
+where
+\begin{itemize}
+    \item $\mathbf{p}_0$ is the origin of the ray
+    \item $\mathbf{d}$ is the direction vector
+    \item $\underline{\mu>0}$ indicates that $\mathbf{p}$ is visible 
+        (in front of the viewing plane),
+\end{itemize} 
+we can calculate intersections with
+\begin{itemize}
+    \item \underline{\emph{sphere}}
+        \[
+            \Longrightarrow
+            \norm{\mathbf{p}_0+\mu\mathbf{d}-\mathbf{p}_s}^2-\norm{\mathbf{r}}^2=0,
+        \]
+        where $\mathbf{p}_s$ is the center of the sphere, $\mathbf{r}$ is an
+        arbitrary radius vector.
+
+        We can derive
+        \[
+            \mu=-\mathbf{d}\cdot\Delta\mathbf{p}\pm\sqrt{
+                {(\mathbf{d}\cdot\Delta\mathbf{p})}^{2}
+                -\norm{\Delta\mathbf{p}}^{2}+\norm{\mathbf{r}}^2
+            }
+        \]
+        where $\Delta\mathbf{p}=\mathbf{p}_0-\mathbf{p}_s$.
+        Assuming there are two solutions with $\mu_1<\mu_2$ (the ray intersects
+        the sphere), 
+        \begin{itemize}
+            \item $\mu_1$ corresponds to the point at which the ray enters the sphere
+            \item $\mu_2$ corresponds to the point at which the ray leaves the sphere.
+        \end{itemize} 
+
+    \item \underline{\emph{cylinder}}
+        \[
+            \Longrightarrow
+            \mathbf{p}_1+\alpha\Delta\mathbf{p}+\mathbf{q}=\mathbf{p}_0+\mu\mathbf{d}
+        \]
+        where $\mathbf{p}_1$/$\mathbf{p}_2$ is one/the other end point of the 
+        long axis of the cylinder, $\Delta\mathbf{p}=\mathbf{p}_1-\mathbf{p}_2$ 
+        is the vector along the long axis of the cylinder (thus $0<\alpha<1$), 
+        $\mathbf{q}$ is a random radius vector.
+
+        We can dot both sides by $\Delta\mathbf{p}$ to solve for $\alpha$ as
+        \[
+            \alpha=\frac{\mathbf{p}_0\cdot\Delta\mathbf{p}+\mu\mathbf{d}\cdot\Delta\mathbf{p}-\mathbf{p}_1\cdot\Delta\mathbf{p}}
+            {\Delta\mathbf{p}\cdot\Delta\mathbf{p}}
+        \]
+        and obtain expression for $\mathbf{q}$ as
+        \[
+            \mathbf{q}=\mathbf{p}_0+\mu\mathbf{d}-\mathbf{p}_1-
+            \left(\frac{\mathbf{p}_0\cdot\Delta\mathbf{p}+\mu\mathbf{d}\cdot\Delta\mathbf{p}-\mathbf{p}_1\cdot\Delta\mathbf{p}}
+            {\Delta\mathbf{p}\cdot\Delta\mathbf{p}}\right)
+            \Delta\mathbf{p}
+        \]
+        by dotting both sides of the above equation by itself,
+        we can solve the quadratic equation for $\mu$
+        \[
+            \norm{\mathbf{q}}^2=r^2
+            ={\left[\mathbf{p}_0+\mu\mathbf{d}-\mathbf{p}_1-
+            \left(\frac{\mathbf{p}_0\cdot\Delta\mathbf{p}+\mu\mathbf{d}\cdot\Delta\mathbf{p}-\mathbf{p}_1\cdot\Delta\mathbf{p}}
+            {\Delta\mathbf{p}\cdot\Delta\mathbf{p}}\right)
+            \Delta\mathbf{p}\right]}^{2}
+        \]
+        where $r$ is the radius of the cylinder.
+        Assuming $\exists\mu_1,\mu_2$ and $\mu_1<\mu_2$, 
+        we can compute
+        \[
+            \alpha_1=\frac{\mathbf{p}_0\cdot\Delta\mathbf{p}+\mu_1\mathbf{d}\cdot\Delta\mathbf{p}-\mathbf{p}_1\cdot\Delta\mathbf{p}}
+            {\Delta\mathbf{p}\cdot\Delta\mathbf{p}}
+        \]
+        to determine which part of the cylinder the intersection is on.
+
+    \item \underline{\emph{plane}}
+        \[
+            \Longrightarrow
+            \mathbf{p}_1+\mathbf{q}=\mathbf{p}_0+\mu\mathbf{d}
+        \]
+        where $j\mathbf{p}_1$ is a point in plane, $\mathbf{q}$ is a vector on
+        the plane.
+
+        Subtracting $\mathbf{p}_1$ and dot both sides by $\mathbf{n}$,
+        the normal of the plane, we can solve for $\mu$ yielding
+        \[
+            \mu=\frac{(\mathbf{p}_1-\mathbf{p}_0)\cdot\mathbf{n}}{\mathbf{d}\cdot\mathbf{n}}
+        \]
+        
+    \item \underline{\emph{triangles}} --- parameterized by vertices
+        $\mathbf{p}_1,\mathbf{p}_2,\mathbf{p}_3$, we need to test
+        \begin{itemize}
+            \item front-facing: $\mathbf{d}\cdot\mathbf{n}<0$
+            \item plane of triangle intersects ray: same as before
+            \item intersection point is inside triangle: using the concept of
+                barycentric coordinates, we can formulate the point as
+                \[
+                    \mathbf{q}=\alpha\mathbf{a}+\beta\mathbf{b}
+                \]
+                with
+                \begin{align*}
+                    \alpha
+                    & =
+                    \frac{(\mathbf{b}\cdot\mathbf{b})(\mathbf{q}\cdot\mathbf{a})
+                    -(\mathbf{a}\cdot\mathbf{b})(\mathbf{q}\cdot\mathbf{b})}
+                    {(\mathbf{a}\cdot\mathbf{a})(\mathbf{b}\cdot\mathbf{b})-{(\mathbf{a}\cdot\mathbf{b})}^{2}}\\
+                    \beta
+                    & =
+                    \frac{\mathbf{q}\cdot\mathbf{b}-\alpha(\mathbf{a}\cdot\mathbf{b})}
+                    {\mathbf{b}\cdot\mathbf{b}}
+                \end{align*} 
+                and test if all of below hold
+                \begin{itemize}
+                    \item $0\le\alpha\le 1$
+                    \item $0\le\beta\le 1$
+                    \item $\alpha+\beta\le 1$
+                \end{itemize} 
+        \end{itemize} 
+\end{itemize} 
+
+
+\subsection{Engineering Problems}
+
+\subsubsection{Precision Problem}
+
+\begin{itemize}
+    \item It is possible that due to precision error, the intersection point
+        resides \emph{within} the object instead of on/above the surface of the
+        object.
+    \item This means the object is reflecting within itself, resulting in
+        erroneous shadow calculation.
+    \item To prevent this from happening, simply add an empirical $\epsilon$
+        tolerance to correct the intersection position so that it is guaranteed
+        to be on/above the surface of the object.
+\end{itemize} 
+
+\subsubsection{Randomness Simulation}
+
+\begin{itemize}
+    \item \underline{\textbf{Monte-Carlo Ray Tracing}}: cast \emph{one} primary
+        ray and compute \emph{multiple} secondary rays with some randomness in
+        their direction.
+        \begin{itemize}
+            \item[-] very costly since the amount of computation grows
+                exponentially
+        \end{itemize} 
+    \item \underline{\textbf{Monte-Carlo Path Tracing}}: cast \emph{multiple}
+        primary rays and compute \emph{one} secondary ray for each primary ray
+        with some randomness in its direction.
+\end{itemize} 
+
+\subsubsection{Acceleration of Ray Tracing}
+
+\begin{itemize}
+    \item \underline{\textbf{Bounding regions}}
+    \item \underline{\textbf{Regular grid}}
+        \begin{itemize}
+            \item[+] easy to construct
+            \item[+] easy to traverse
+            \item[-] may be only sparsely filled
+            \item[-] geometry may still be clumped
+        \end{itemize} 
+    \item \underline{\textbf{Adaptive grid}}
+        \begin{itemize}
+            \item[+] grid complexity matches geometric density
+            \item[-] more expensive to traverse
+        \end{itemize} 
+    \item \underline{\textbf{Binary Space Partition(BSP) tree}}
+        \begin{itemize}
+            \item[+] enable simple front-to-back traversal
+            \item[+] solves the problem of painter's algorithm by
+                \begin{itemize}
+                    \item providing a rapid method of sorting polygons w.r.t.
+                        given viewport
+                    \item subdividing overlapping polygons to avoid errors
+                \end{itemize} 
+            \item[-] construction of BSP tree is expensive
+        \end{itemize} 
+\end{itemize} 
+
+
+\section{Spline Curves}
+
+\subsection{Definition}
+
+\begin{itemize}
+    \item \underline{\emph{Interpolating}} spline: defined by a start point, an end point,
+        and a small set of points called \textbf{knots} or \textbf{control
+        points} that they go through smoothly
+    \item \underline{\emph{Approximating}} spline: same points but do \emph{not} need to
+        pass through them except for start and end points
+    \item Non-parametric spline has only one curve that fits all the data.
+\end{itemize} 
+
+\subsection{Spline Parameterization}
+
+\begin{itemize}
+    \item spline in vector form in 2D is
+        \[
+            \mathbf{P}=\mathbf{a}_2\mu^{2}+\mathbf{a}_1\mu+\mathbf{a}_0
+        \]
+        with a parameter $\mu$ and three vector constants $\mathbf{a}_0,
+        \mathbf{a}_1, \mathbf{a}_2\in\mathbb{R}^{2}$.
+    \item Assuming we have three points:
+        \begin{itemize}
+            \item $\mathbf{P}_0$: at the start point, i.e.\ $\mu=0$
+            \item $\mathbf{P}_1$: somewhere in the middle, i.e. $\mu=\mu_1$
+            \item $\mathbf{P}_2$: at the end point, i.e.$\mu=1$
+        \end{itemize} 
+        we can obtain the following system
+        \[
+            \begin{cases}
+                \mathbf{P}_0=\mathbf{a}_0 \\
+                \mathbf{P}_1=\mathbf{a}_2\mu_1^2+\mathbf{a}_1\mu_1+\mathbf{a}_0 \\
+                \mathbf{P}_2=\mathbf{a}_2+\mathbf{a}_1+\mathbf{P}_0
+            \end{cases} 
+        \] 
+        and solve for the three vector constants.
+\end{itemize} 
+
+\subsection{Spline Patches}
+
+\begin{itemize}
+    \item The simpliest and most effective way to calculate spline patches is to
+        use a cubic polynomial
+        \[
+            \mathbf{P}=\mathbf{a}_3\mu^3+\mathbf{a}_2\mu^{2}+\mathbf{a}_1\mu+\mathbf{a}_0
+        \]
+        with
+        \[
+            \mathbf{P}'=3\mathbf{a}_3\mu^2+2\mathbf{a}_2\mu+\mathbf{a}_1
+        \]
+        so as to join the patches smoothly
+    \item By using the value of $\mathbf{P}_{i-1}$, $\mathbf{P}_i$,
+        $\mathbf{P}_{i+1}$, $\mathbf{P}_{i+2}$,
+        we can obtain the following system with the spline patch
+        between $\mathbf{P}_i$ and $\mathbf{P}_{i+1}$
+        \begin{align*}
+            \mathbf{P}_i &= \mathbf{a}_0 \\
+            \mathbf{P}_{i+1} &= \mathbf{a}_3+\mathbf{a}_2+\mathbf{a}_1+\mathbf{a}_0 \\
+            \mathbf{P}_i' &= \mathbf{a}_1 =
+            \frac{1}{2}(\mathbf{P}_{i+1}-\mathbf{P}_{i-1}) \\
+            \mathbf{P}_{i+1}' &=3\mathbf{a}_3+2\mathbf{a}_2+\mathbf{a}_1
+            =\frac{1}{2}(\mathbf{P}_{i+2}-\mathbf{P}_i)
+        \end{align*} 
+        and in matrix form, we have
+        \[
+            \begin{pmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                1 & 1 & 1 & 1 \\
+                0 & 1 & 2 & 3
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \mathbf{a}_0 \\
+                \mathbf{a}_1 \\
+                \mathbf{a}_2 \\
+                \mathbf{a}_3 \\
+            \end{pmatrix} 
+            =
+            \begin{pmatrix}
+                \mathbf{P}_i \\
+                \mathbf{P}_i' \\
+                \mathbf{P}_{i+1} \\
+                \mathbf{P}_{i+1}' \\
+            \end{pmatrix} 
+        \]
+        therefore solving the four vector constants as
+        \[
+            \begin{pmatrix}
+                \mathbf{a}_0 \\
+                \mathbf{a}_1 \\
+                \mathbf{a}_2 \\
+                \mathbf{a}_3 \\
+            \end{pmatrix} 
+            =
+            \begin{pmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                -3 & -2 & 3 & -1 \\
+                2 & 1 & -2 & 1
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \mathbf{P}_i \\
+                \mathbf{P}_i' \\
+                \mathbf{P}_{i+1} \\
+                \mathbf{P}_{i+1}' \\
+            \end{pmatrix} 
+        \]
+\end{itemize} 
+
+\subsection{Smoothness}
+
+\subsubsection{Parametric Continuity}
+
+\begin{itemize}
+    \item $C^0$ continuous --- $(x,y)$ values of the curve agree
+    \item $C^1$ continuous --- $(x,y)$ and first order derivatives 
+        $\left(\frac{\mathrm{d}x}{\mathrm{d}s},\frac{\mathrm{d}y}{\mathrm{d}s}\right)$
+        agree
+    \item $C^2$ continuous --- $(x,y)$, first and second order
+        derivatives agree
+    \item[$\vdots$]
+\end{itemize} 
+
+\subsubsection{Geometric Continuity}
+
+\begin{itemize}
+    \item $G^0$ continuous --- same as $C^0$
+    \item $G^1$ continuous --- $G^0$ and proportional first order derivatives
+    \item $G^2$ continuous --- $G^1$ and proportional second order derivatives
+    \item[$\vdots$]
+\end{itemize} 
+
+\subsection{Bezier Curve}
+
+For $N+1$ control points, we have
+\[
+    \mathbf{P}(\mu)=\sum_{i=0}^{N} W(N,i,\mu)\mathbf{P}_i
+\]
+where
+\[
+    W(N,i,\mu)=
+    \begin{pmatrix}
+        N \\
+        i
+    \end{pmatrix} 
+    \mu^i{(1-\mu)}^{N-i}\qquad
+\]
+is the Berstein blending function.
+Specially, we can show that
+\[
+    \text{4-point Bezier curve}=
+    \text{Cubic patch going through $\mathbf{P}_0$ and $\mathbf{P}_3$}.
+\]
+with $\mathbf{P}_1$ and $\mathbf{P}_2$ being the control points, since
+\begin{align*}
+    \mathbf{P}(\mu)
+    &={(1-\mu)}^{3}\mathbf{P}_0+3\mu{(1-\mu)}^{2}\mathbf{P}_1
+    +3\mu^2(1-\mu)\mathbf{P}_2+\mu^3\mathbf{P}_3 \\
+    &=\mathbf{a}_0\mu^3+\mathbf{a}_2\mu^2+\mathbf{a}_1\mu+\mathbf{a}_0
+\end{align*} 
+where
+\begin{align*}
+    \mathbf{a}_0 & = \mathbf{P}_0 \\
+    \mathbf{a}_1 & = 3\mathbf{P}_1 - 3\mathbf{P}_0 \\
+    \mathbf{a}_2 & = 3\mathbf{P}_2 - 6\mathbf{P}_1 + 3\mathbf{P}_0 \\
+    \mathbf{a}_3 & = \mathbf{P}_3 - 3\mathbf{P}_2 + 3\mathbf{P}_1-\mathbf{P}_0
+\end{align*} 
+thereby deriving that
+\begin{align*}
+    \mathbf{P}_0' & = 3\mathbf{P}_1-3\mathbf{P}_0 \\
+    \mathbf{P}_3' & = 3\mathbf{P}_3-3\mathbf{P}_2.
+\end{align*} 
+In short, if you simply want to connect two splines with $C^1$ continuity,
+use a spline patch; otherwise if custom control on one spline is required,
+use Bezier curve.
+
+
+\subsection{Surface Parameterization}
+
+\begin{itemize}
+    \item 
+        We can extend the formulation to simple parametric surfaces using the vector
+        equation with 6 unknown vector constants
+        \begin{align*}
+            \mathbf{P}(\mu,\nu)
+            & =
+            \begin{pmatrix}
+                \mu & \nu & 1
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \mathbf{a} & \mathbf{b} & \mathbf{c} \\
+                \mathbf{b} & \mathbf{d} & \mathbf{e} \\
+                \mathbf{c} & \mathbf{e} & \mathbf{f} \\
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \mu \\
+                \nu \\
+                1
+            \end{pmatrix} \\
+            & =
+            \mathbf{a}\mu^2+\mathbf{d}\nu^2+2\mathbf{b}\mu\nu+2\mathbf{c}\mu+2\mathbf{e}\nu+\mathbf{f}.
+        \end{align*} 
+        Similarly, if we know 6 points with known $\mu$s, we can solve the equation.
+    \item 
+        To find the contours that bound the patch, we substitute 0 or 1 for one of $\mu$
+        or $\nu$ in the equation, for instance
+        \[
+            \mathbf{P}(0,\nu)=\mathbf{d}\nu^2+2\mathbf{e}\nu+\mathbf{f}.
+        \]
+    \item 
+        We can use higher orders, e.g.
+        \[
+            \mathbf{P}(\mu,\nu)
+            =
+            \begin{pmatrix}
+                \mu^3 & \mu^2 & \mu & 1
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \mathbf{a} & \mathbf{b} & \mathbf{c} & \mathbf{d} \\
+                \mathbf{b} & \mathbf{e} & \mathbf{f} & \mathbf{g} \\
+                \mathbf{c} & \mathbf{f} & \mathbf{h} & \mathbf{j} \\
+                \mathbf{d} & \mathbf{g} & \mathbf{j} & \mathbf{k}
+            \end{pmatrix} 
+            \begin{pmatrix}
+                \nu^3 \\
+                \nu^2 \\
+                \nu \\
+                1
+            \end{pmatrix} \\
+        \]
+        \begin{itemize}
+            \item[+] gives more variety in shape and better control
+            \item[-] hard to apply and generalize
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Surface Patches}
+
+\begin{itemize}
+    \item We need to match three values at each corner:
+        \[
+            \mathbf{P}(\mu,\nu)\qquad\frac{\partial\mathbf{P}(\mu,\nu)}{\partial\mu}
+            \qquad\frac{\partial\mathbf{P}(\mu,\nu)}{\partial\nu}
+        \]
+    \item We could compute the four boundaries
+        $\mathbf{P}(\mu,0)$, $\mathbf{P}(\mu,1)$, $\mathbf{P}(0,\nu)$, $\mathbf{P}(1,\nu)$
+        with the four end points and the partial derivatives,
+        using the approach of
+        computing spline patch.
+    \item The \underline{\textbf{Coons patch}} defines the internal points by
+        linear interpoloation of the edge curves as
+        \begin{align*}
+            & \mathbf{P}(\mu,\nu) = 
+            \mathbf{P}(\mu,0)(1-\nu)+\mathbf{P}(\mu,1)\nu+\mathbf{P}(0,\nu)(1-\mu)+\mathbf{P}(1,\nu)\mu \\
+            & \underbrace{-\mathbf{P}(0,1)(1-\mu)\nu-\mathbf{P}(1,0)\mu(1-\nu)
+            -\mathbf{P}(0,0)(1-\mu)(1-\nu)-\mathbf{P}(1,1)\mu\nu}_{\text{subtract corners}}
+        \end{align*} 
+    \item Numerical Ray-Patch Algorithm
+        \begin{enumerate}
+            \item Polygonize the patch at a low resolution (say $4\times 4$).
+            \item Calculate the ray intersection wtih the (32) triangles and
+                find the nearest intersection.
+            \item Polygonize the immediate area of the intersection and
+                calculate a better estimate of the intersection.
+            \item Continue until the best estimate is found
+        \end{enumerate} 
+    \item Example question:
+        \begin{table}[ht]
+            \centering
+            \label{}
+            \begin{tabular}{cl|cccc}
+                & \multicolumn{5}{c}{$y,\nu\longrightarrow$} \\
+                &  & 3 & 4 & 5 & 6 \\ \cline{2-6}
+                \multirow{4}{*}{\shortstack{$x,\mu$\\$\downarrow$}}
+                  & 8 & \cdot & \textcolor{red}{10} & 9 & \cdot \\ \cline{4-5}
+                  & 9 & 14 & \multicolumn{1}{|c}{12} & \multicolumn{1}{c|}{11} & 10  \\
+                  & 10 & 15 & \multicolumn{1}{|c}{\textcolor{blue}{13}} & \multicolumn{1}{c|}{14} & 10 \\ \cline{4-5}
+                  & 11 & \cdot & 10 & 9 & \cdot
+            \end{tabular} 
+        \end{table} \\
+        with
+        \begin{align*}
+            \mathbf{P}(0,0) & = (9,4,12), \\
+            \mathbf{P}(0,1) & = (9,5,11), \\
+            \mathbf{P}(1,0) & = (10,4,13), \\
+            \mathbf{P}(1,1) & = (10,4,14),
+        \end{align*} 
+        we can determine gradients for all four corners for $\mu$ and $\nu$. For
+        instance,
+        \[
+            \left.\frac{\partial\mathbf{P}}{\partial\mu}\right|_{(0,0)}=
+                \dfrac{\begin{pmatrix}
+                    10 \\
+                    4 \\
+                    13
+                \end{pmatrix} 
+                -
+                \begin{pmatrix}
+                    8 \\
+                    4 \\
+                    10
+                \end{pmatrix}}{2}
+                =
+                \begin{pmatrix}
+                    1 \\
+                    0 \\
+                    1.5
+                \end{pmatrix} 
+        \]
+\end{itemize} 
+
+
+\section{Radiosity}
+
+\subsection{Reflectance}
+
+In practice we only calculate the illumination from light sources and 
+did not attempt to calculate the illumination of neighbouring objects, using
+\[
+    I_\text{reflected}
+    = k_a+k_d(\mathbf{n}\cdot\mathbf{l})I_\text{incident}
+    +k_s{(\mathbf{r}\cdot\mathbf{v})}^{q}I_\text{incident}.
+\]
+A better approximation to the reflectance equation is to make the ambient light
+term a function of the incident light as well:
+\begin{align*}
+    I_\text{reflected}
+    & = k_aI_\text{incident}+k_d(\mathbf{n}\cdot\mathbf{l})I_\text{incident}
+    +k_s{(\mathbf{r}\cdot\mathbf{v})}^{q}I_\text{incident} \\
+    & = (k_a +
+    k_d(\mathbf{n}\cdot\mathbf{l})+k_s{(\mathbf{r}\cdot\mathbf{v})}^{q})I_\text{incident} \\
+    & := RI_\text{incident}
+\end{align*} 
+where $R$ is a viewpoint-dependent reflectance function.
+
+
+\subsection{Radiosity}
+
+\begin{itemize}
+    \item \underline{\textbf{Radiosity}}: the energy per unit area leaving a surface
+    \item For each patch $i$ the total energy leaving the patch is the sum of
+        the energy it emits and the light energy it reflects, as
+        \[
+            B_i=E_i+R_iI_i
+        \]
+    \item We can compute the total incident light at patch $i$ from all the
+        patches as
+        \[
+            I_i=\sum_{j=1}^{n} B_jF_{ij}
+        \]
+        where $n$ is the number of patches in the scene, 
+        $F_{ij}$ is the \underline{\textbf{form factor}},
+        a constant linking surface patch $i$ and $j$, and $F_{ii}=0$.
+    \item We can thus obtain the following equation
+        \[
+            B_i=E_i+R_i\sum_jB_jF_{ij},
+        \]
+        re-write the equation to be
+        \[
+            B_i-\sum_jR_iB_jF_{ij}=E_i,
+        \]
+        and formulate the problem in matrix form as
+        \[
+            \begin{pmatrix}
+                1 & -R_1F_{12} & -R_1F_{13} & \ldots & -R_1F_{1n} \\
+                -R_2F_{21} & 1 & -R_2F_{23} & \ldots & -R_2F_{2n} \\
+                -R_3F_{31} & -R_3F_{32} & 1 & \ldots & -R_3F_{3n} \\
+                \vdots & \vdots & \vdots & \ddots & \vdots \\
+                -R_nF_{n1} & -R_nF_{n2} & -R_nF_{n3} & \ldots & 1
+            \end{pmatrix} 
+            \begin{pmatrix}
+                B_1 \\
+                B_2 \\
+                B_3 \\
+                \vdots \\
+                B_n
+            \end{pmatrix} 
+            =
+            \begin{pmatrix}
+                E_1 \\
+                E_2 \\
+                E_3 \\
+                \vdots \\
+                E_n
+            \end{pmatrix}.
+        \]
+    \item The form factor $F_{ij}$ can be computed as illustrated in figure
+        \ref{fig:form_factor} using the following equation
+        \[
+            F_{ij}=\frac{1}{|A_{i}|}\int_{A_i}\int_{A_j}
+            \frac{\cos{\phi_i}\cos{\phi_j}}{\pi r^2}
+            \mathrm{d}A_j\mathrm{d}A_i
+        \]
+        where $|A_i|$ is the area of patch $A_i$.
+        \begin{figure}[h]
+          	\includegraphics[scale=0.7]{form_factor.png}
+          	\centering
+          	\caption{A form factor couples each pair of
+            patches}\label{fig:form_factor}
+        \end{figure}
+        By assuming $|A_i|\ll r$ and the constancy across patch $A_j$,
+        we can simplify to the approximate solution
+        \[
+            F_{ij}=\frac{\cos{\phi_i}\cos{\phi_j}|A_j|}{\pi r^2}.
+        \]
+\end{itemize} 
+
+\subsection{The Hemicube Method}
+
+
 \end{document}
