@@ -1746,28 +1746,204 @@ where $R$ is a viewpoint-dependent reflectance function.
                 E_n
             \end{pmatrix}.
         \]
-    \item The form factor $F_{ij}$ can be computed as illustrated in figure
-        \ref{fig:form_factor} using the following equation
+    \item The above system can be solved using \underline{\textbf{Gauss Seidel}}
+        method: use
         \[
-            F_{ij}=\frac{1}{|A_{i}|}\int_{A_i}\int_{A_j}
-            \frac{\cos{\phi_i}\cos{\phi_j}}{\pi r^2}
-            \mathrm{d}A_j\mathrm{d}A_i
+            B_i^k=E_i+R_i\sum_jB_j^{k-1}F_{ij}
         \]
-        where $|A_i|$ is the area of patch $A_i$.
-        \begin{figure}[h]
-          	\includegraphics[scale=0.7]{form_factor.png}
-          	\centering
-          	\caption{A form factor couples each pair of
-            patches}\label{fig:form_factor}
-        \end{figure}
-        By assuming $|A_i|\ll r$ and the constancy across patch $A_j$,
-        we can simplify to the approximate solution
-        \[
-            F_{ij}=\frac{\cos{\phi_i}\cos{\phi_j}|A_j|}{\pi r^2}.
-        \]
+        and set initial values to e.g. $B_i^0=0$
+        to give successive estimates $B_i^0,B_i^1,\ldots$.
+        This evaluation process of $B_i^k$ is called \emph{gathering},
+        equivalent to evaluate the matrix row-by-row.
+        \begin{itemize}
+            \item The method is stable and converges.
+            \item The radiosity matrix is `diagonally dominant', which is
+                sufficient to guarantee convergence.
+            \item At the first iteration, the emitted light energy is
+                distributed to those patches that are illuminated.
+            \item Those patches illuminate others in the next cycle and so on.
+            \item Images start dark and progressively illuminate as the
+                iteration proceeds.
+        \end{itemize} 
+    \item To make Gauss Seidel method faster, suppose in one iteration,
+        $B_i$ changes by $\Delta B_i=B_i^k-B_i^{k-1}$ called the 
+        \underline{\textbf{unshot radiosity}}.
+        Every other patch in the scene will change (if form factor is not zero) by
+        \begin{equation}\label{eq:unshot}
+            \Delta B_j=R_jF_{ji}\Delta B_i
+        \end{equation} 
+        modifying the iterative scheme to be
+        \begin{equation}\label{eq:unshot_update}
+            B_j^k=B_j^{k-1}+R_jF_{ji}\Delta B_j^{k-1}.
+        \end{equation} 
+        This evaluation process is called \emph{shooting}, equivalent
+        to evaluate the matrix column wise.
+        \begin{enumerate}
+            \item The patches with the largest $\Delta B$ are evaluated first
+            \item shoot the radiosity for the chosen patch and update all other
+                patches with equataion \eqref{eq:unshot} and
+                \eqref{eq:unshot_update}.
+            \item set $\Delta B_i=0$ and iterate
+        \end{enumerate}  
 \end{itemize} 
 
+\subsection{The Form Factor}
+
+The form factor $F_{ij}$ can be computed as illustrated in figure
+\ref{fig:form_factor} using the following equation
+\[
+    F_{ij}=\frac{1}{|A_{i}|}\int_{A_i}\int_{A_j}
+    \frac{\cos{\phi_i}\cos{\phi_j}}{\pi r^2}
+    \mathrm{d}A_j\mathrm{d}A_i
+\]
+where $|A_i|$ is the area of patch $A_i$.
+\begin{figure}[h]
+    \includegraphics[scale=0.4]{form_factor.png}
+    \centering
+    \caption{A form factor couples each pair of
+    patches}\label{fig:form_factor}
+\end{figure}
+By assuming $|A_i|\ll r$ and the constancy across patch $A_j$,
+we can simplify to the approximate solution
+\[
+    F_{ij}=\frac{\cos{\phi_i}\cos{\phi_j}|A_j|}{\pi r^2},
+\]
+giving the \underline{form factor repciprocity}
+\[
+    F_{ji}=\frac{F_{ij}|A_i|}{|A_j|}
+\]
+so form factors for only half the patches need to be computed. 
+\smallskip
+\\But the amount of storage is still massive.
+If there are 6e5 patches, there are 3.6e9 form factors and need 7GB.
+As many of them are 0 we can save space by using an indexing scheme,
+e.g. use 1 bit per form factor, bit=0 indicates form factor=0 and not stored.
+
 \subsection{The Hemicube Method}
+
+\begin{itemize}
+    \item \underline{\textbf{Hemicube}}: the half unit cube that bounds the
+        hemisphere
+        \begin{itemize}
+            \item All patches that project onto the same area of the hemisphere have the
+                same form factor.
+            \item The hemicube is preferred to the hemisphere since computing
+                intersections with planes is computationally less demanding.
+            \item A hemicube of side 1 unit is placed over the centre of a patch whose
+                form factors are to be computed.
+            \item Projection of other \emph{nearest visible} patches onto the hemicube 
+                could be done by ray tracing (neatly solves occlusion problem)
+                or projection (requires z-buffering).
+        \end{itemize} 
+    \item \underline{\textbf{Hemicube pixels}}: the set of square patches which
+        each of the 5 faces of the hemicube is divided regularly into
+        \begin{itemize}
+            \item the \emph{larger} the size of the hemicube pixel
+            \item the \emph{worse} the estimate of the form factors
+            \item the \emph{faster} the algorithm
+        \end{itemize} 
+    \item \underline{\textbf{Delta form factor}}: the form factor between the
+        hemicube pixels and the patch under consideration
+        \begin{itemize}
+            \item If the area of a hemicube pixel is $|A|$, the delta form
+                factor is
+                \[
+                    \frac{\cos{\phi_i}\cos{\phi_j}|A|}{\pi r^2}.
+                \]
+            \item These delta form factors can be stored in a look-up table.
+            \item They can then be applied to each patch without any more form
+                factor calculations.
+            \item To compute the delta form factors,
+                \[
+                    \begin{cases}
+                        \dfrac{|A|}{\pi r^4} & \text{since for a top face, }
+                        \cos{\phi_i}=\cos{\phi_j}=\dfrac{1}{r} \\[8px]
+                        \dfrac{z_p|A|}{\pi r^4} & \text{since for a side face, }
+                        \cos{\phi_i}=\dfrac{1}{r}, \cos{\phi_j}=\dfrac{z_p}{r}
+                    \end{cases}  
+                \]
+                where $z_p$ is the height of the side face relative to the
+                patch.
+            \item Once we found the projection of patches, we compute the form
+                factor for each patch by summing the delta form factors of the
+                hemicube pixels to which it projects.
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Meshing}
+
+\begin{itemize}
+    \item \underline{\textbf{Meshing}}: the process of dividing the scene into
+        patches
+    \item Meshing artefacts are scene dependent.
+    \item The most obvious are called $D^0$ artefacts, caused by discontinuities
+        in the radiosity function.
+    \item \underline{\textbf{Discontinuity Meshing}} (\emph{a priori})
+        \begin{itemize}
+            \item compute discontinuities in advance, e.g. object boundaries,
+                albedo/reflectivity discontinuities, shadows, etc.
+            \item align the patches with them and don't interpolate them so that
+                it is not smoothened
+        \end{itemize} 
+    \item \underline{\textbf{Adaptive Meshing}} (\emph{a posteriori})
+        \begin{itemize}
+            \item re-compute the mesh during the radiosity calculation
+            \item if two adjacent patches have a strong discontinuity in
+                radiosity value, we can
+                \begin{itemize}
+                    \item put more patches into areas with high discontinuity OR
+                    \item move the mesh boundary to coincide with the greatest
+                        change
+                \end{itemize} 
+        \end{itemize} 
+    \item \underline{\textbf{h-refinement}}: subdivision of patches
+        \begin{enumerate}
+            \item Compute the radiosity at the vertices of the coarse grid.
+            \item Subvdivide patches if the discontinuities exceed a threshold.
+            \item not needed to re-compute complete radiosity by assuming that
+            radiosity of a patch is the sum of that of its elements
+    \end{enumerate} 
+    \item \underline{\textbf{r-refinement}}: patch refinement
+        \begin{enumerate}
+            \item Compute the radiosity at the vertices of the coarse grid.
+            \item Move the patch boundaries closer together if they have high
+                radiosity changes.
+            \item Need to re-compute the entire radiosity solution for each
+                refinement.
+        \end{enumerate} 
+        \begin{figure}
+          	\includegraphics[scale=0.5]{rh-refinement.png}
+          	\centering
+          	\caption{Adaptive Meshing using h-refinement on the
+            left; \\adaptive meshing using r-refinement on the right}
+            \label{fig:rh}
+        \end{figure}
+\end{itemize} 
+
+\subsection{Radiosity Method and Issues}
+
+\begin{enumerate}
+    \item Divide the graphics world into discrete patches. \\
+        \emph{Meshing strategies, meshing errors}
+    \item Compute form factors by the hemicube method. \\
+        \emph{Alias errors} 
+        \begin{itemize}
+            \item due to discrete sampling of a continuous
+                environment
+            \item not significant since the errors are averaged over a large
+                number of pixels
+        \end{itemize} 
+    \item Solve the matrix equation for the radiosity of each patch. \\
+        \emph{Computational strategies} 
+        --- see parts regarding Guass Seidle method
+    \item Average the radiosity values at the corners of each patch. \\
+        \emph{Interpolation approximations}
+        \begin{itemize}
+            \item may not be significant for small patches
+        \end{itemize} 
+    \item Compute a texture map of each point or render directly. \\
+        \emph{At least this stage is relatively easy!}
+\end{enumerate} 
 
 
 \end{document}
