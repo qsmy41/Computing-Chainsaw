@@ -452,7 +452,90 @@ we can compute the magnitude and the orientation as
 \end{enumerate} 
 
 
-\subsection{Learning-based Edge Detection}
+\section{Hough Transform}
+
+\begin{itemize}
+    \item \underline{\textbf{Hough transform}} is a transform from image space
+        to parameter space, e.g. from an edge map to the two parameters of a
+        line.
+    \item output is a parametric model, given the input edge points
+    \item each edge point vote for possible models in the parameter space
+    \item Example:
+        \begin{itemize}
+            \item use slope intercept $b=y-mx$ to be the line model
+            \item each edge point poll vote for different $b$ and $m$ values
+                (also lines in parameter space)
+            \item In practice, we use 2D bins to divide the parameter space;
+                each point increases the vote by 1 in one of the bins,
+                as shown in figure \ref{fig:hough_grid}.
+                \begin{figure}
+                  	\includegraphics[scale=0.45]{hough_grid.png}
+                  	\centering
+                  	\caption{hough transform grid}\label{fig:hough_grid}
+                \end{figure}
+            \item But the parameter space could be too large,
+                $[-\infty,+\infty]$; use \emph{normal
+                form} instead
+                \[
+                    x\cos{\theta}+y\sin{\theta}=\rho
+                \]
+                so at least for one dimension, $\theta\in[0,\pi)$.
+        \end{itemize} 
+    \item Line detection by Hough transform:
+        \begin{enumerate}
+            \item Initialize the bins $H(\rho,\theta)$ to all zeros.
+            \item For each $(x,y)$ and each $\theta$, calculate $\rho$ and
+                $H(\rho,\theta)++$.
+            \item Find $(\rho,\theta)$ where $H(\rho,\theta)$ is a local maximum
+                and larger than a threshold.
+                \begin{itemize}
+                    \item local maximum so there can be multiple solutions, to
+                        reduce FN
+                    \item larger than a threshold so as to reduce FP
+                \end{itemize} 
+            \item The detected lines are given by
+                $\rho=x\cos{\theta}+y\sin{\theta}$.
+        \end{enumerate} 
+    \item robust to noise/occlusion
+        \begin{itemize}
+            \item edge map is often generated after image smoothing
+            \item broken/unoccluded edge points can still 
+                vote and contribute to line detection
+        \end{itemize} 
+    \item Circle detection by Hough transform
+        \begin{itemize}
+            \item  parameter space also forms circles
+            \item If radius $r$ is also unknown, then 3D parameter space
+                $H(a,b,r)$
+            \item parameterize to be $x = a+r\cos{\theta}$ and $y =
+                b+r\sin{\theta}$, since we know $\theta$ form edge detection, we
+                can narrow the voting area to move along $\theta$ for a distance
+                $r$.
+        \end{itemize} 
+    \item Pros and Cons:
+        \begin{itemize}
+            \item[+] detects multiple instances
+            \item[+] robust to image noise
+            \item[+] robust to occlusion
+            \item[-] Computational complexity is quite high. For each edge
+                point, we need to vote to a 2D or even 3D parameter space.
+            \item[-] need to carefully set parameters such as those for edge
+                detectors, the threshold for the accumulator or range of circle
+                radius.
+        \end{itemize} 
+\end{itemize} 
+
+
+\section{Interest Point Detection}
+
+\subsection{Definition}
+
+\begin{itemize}
+    \item \underline{\textbf{Interest point}}: points that we are interested in
+        and are useful for subsequent image processing and analysis.
+        They are also called \emph{keypoints}, \emph{landmarks},
+        \emph{low-level} features.
+\end{itemize} 
 
 
 \end{document}
