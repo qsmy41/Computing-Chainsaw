@@ -537,5 +537,672 @@ we can compute the magnitude and the orientation as
         \emph{low-level} features.
 \end{itemize} 
 
+\subsection{Harris Detection}
+
+\begin{itemize}
+    \item small windows to tell if it is a corner
+        \begin{itemize}
+            \item flat --- change of intensity in neighter direction
+            \item edge --- change of intensity along just one direction
+            \item corner --- change of intensity along both direction
+        \end{itemize} 
+    \item If the window shifts by $[u,v]$, together with Taylor expansion
+        \[
+            I(x+u,y+v)=I(x,y)+uI_x(x,y)+vI_y(x,y)+\cdots
+        \]the change of intensities is given by
+        \begin{align*}
+            E(u,v)
+            &=\sum_{(x,y)\in W} w(x,y){[I(x+u,y+v)-I(x,y)]}^{2}\\
+            &=\sum w(x,y){[uI_x(x,y)+vI_y(x,y)]}^{2}\\
+            &=\sum w(x,y)(u^2I_x^2+2uvI_xI_y+v^2I_y^2)\\
+            &=\sum w(x,y)
+            \begin{pmatrix}
+                u & v
+            \end{pmatrix} 
+            \begin{pmatrix}
+                I_x^2 & I_xI_y \\
+                I_xI_y & I_y^2
+            \end{pmatrix} 
+            \begin{pmatrix}
+                u \\
+                v
+            \end{pmatrix} \\
+            &=\begin{pmatrix}
+                u & v
+            \end{pmatrix} 
+            \sum w(x,y)\begin{pmatrix}
+                I_x^2 & I_xI_y \\
+                I_xI_y & I_y^2
+            \end{pmatrix} 
+            \begin{pmatrix}
+                u \\
+                v
+            \end{pmatrix} \\
+            &:=\begin{pmatrix}
+                u & v
+            \end{pmatrix} 
+            M
+            \begin{pmatrix}
+                u \\
+                v
+            \end{pmatrix}
+        \end{align*} 
+    \item $E$ is large if image derivatives are large
+    \item We can infer the directions of change from $M$
+        \begin{itemize}
+            \item If $M=\begin{pmatrix}
+                    0 & 0 \\
+                    0 & 0
+            \end{pmatrix} $,
+            this is a \underline{\emph{flat}} region.
+        \item If $M=\begin{pmatrix}
+                10 & 0 \\
+                0 & 0.1
+            \end{pmatrix} $,
+            large change if shift along $u$ $\Rightarrow$ an \underline{\emph{edge}}.
+        \item If $M=\begin{pmatrix}
+                10 & 0 \\
+                0 & 10
+            \end{pmatrix} $,
+            large change in whichever way $\Rightarrow$ a \underline{\emph{corner}}.
+        \item If more complicated $M$, we can do \underline{\textbf{eigen
+            decomposition}} to obtain diagonal matrix $\Lambda$, and compare
+            against the above 3 matrices.
+        \end{itemize} 
+    \item \underline{\textbf{Cornerness}} metrics:
+        \begin{itemize}
+            \item Harris and Stephens:
+                \[
+                    R = \lambda_1\lambda_2-k{(\lambda_1+\lambda_2)}^{2}
+                    =\text{det}(M)-k{(\text{trace}(M))}^{2}
+                \]
+                where $k$ is a small number, $k=0.05$.
+            \item Kanade and Tomasi:
+                \[
+                    R = \text{min}(\lambda_1,\lambda_2)
+                \]
+            \item Noble:
+                \[
+                    R = \frac{\lambda_1\lambda_2}{\lambda_1+\lambda_2+\epsilon}
+                \]
+        \end{itemize} 
+    \item also detects blobs and textures
+    \item algorithm:
+        \begin{enumerate}
+            \item compute $x$ and $y$ derivative of an image
+                \[
+                    I_x=G_x*I, I_y=G_y*I
+                \]
+                where $G$ can be e.g. sobel filter
+            \item at each pixel, compute
+                \[
+                    M=\sum_{x,y}w(x,y)\begin{pmatrix}
+                        I_x^2 & I_xI_y \\
+                        I_xI_y & I_y^2
+                    \end{pmatrix} 
+                \]
+            \item calculate detector response and detect interest point which
+                are local maxima and whose $R$ is above threshold.
+        \end{enumerate} 
+    \item \underline{\emph{scaled}} Harrison detector:
+        \[
+            M = \sum_{x,y} w(x,y)\sigma^2
+            \begin{pmatrix}
+                I_x^2 & I_xI_y \\
+                I_xI_y & I_y^2
+            \end{pmatrix} 
+        \]
+        so that 
+        \begin{itemize}
+            \item at each scale $\sigma$, determine the scale which gives us the
+                largest detector response
+            \item prevent "the larger the scale, the smaller the derivative
+                magnitude" problem
+        \end{itemize} 
+    \item Algorithm: perform orignal Harrison detector steps for each scale, and
+        then determine the interest point.
+\end{itemize} 
+
+\subsection{Laplacian of Gaussian (LOG)}
+
+\begin{itemize}
+    \item First perform Gaussian smoothing, then Laplacian Operator, i.e.
+        \[
+            \Delta(f*h)=\frac{\partial^2(f*h)}{\partial x^2}+
+            \frac{\partial^2(f*h)}{\partial y^2}=f*
+            \left(\frac{\partial^2h}{\partial x^2}+\frac{\partial^2h}{\partial
+            y^2}\right)
+        \]
+        where $h$ is the Gaussian kernel and $\Delta
+        f=\frac{\partial^2f}{\partial x^2}+\frac{\partial^2f}{\partial y^2}$,
+        with the following laplacian filter
+        \[
+            \begin{pmatrix}
+                0 & 1 & 0 \\
+                1 & -4 & 1 \\
+                0 & 1 & 0
+            \end{pmatrix} 
+            =
+            \begin{pmatrix}
+                0 & 0 & 0 \\
+                1 & -2 & 1 \\
+                0 & 0 & 0
+            \end{pmatrix} 
+            +
+            \begin{pmatrix}
+                0 & 1 & 0 \\
+                0 & -2 & 0 \\
+                0 & 1 & 0
+            \end{pmatrix} 
+        \]
+        Since we know the formation of a 2D Gaussian, we can derive the
+        following:
+        \[
+            \frac{\partial^2h}{\partial x^2}+\frac{\partial^2h}{\partial y^2}
+            =-\frac{1}{\pi\sigma^4}\left(1-\frac{x^2+y^2}{2\sigma^2}\right)
+            e^{-\frac{x^2+y^2}{2\sigma^2}}
+        \]
+    \item To ensure comparability between scales, we do
+        \[
+            \text{LoG}_\text{norm}(x,y,\sigma)=\sigma^2(I_{xx}(x,y,\sigma)+I_{yy}(x,y,\sigma))
+        \]
+        similar to Harrison detector.
+\end{itemize} 
+
+\subsection{Difference of Gaussian (DoG)}
+
+\begin{itemize}
+    \item DoG is defined as\[
+            \text{DoG}(x,y,\sigma):=I*G(k\sigma)-I*G(\sigma)
+            \approx (k-1)\sigma^2\nabla^2G(x,y,\sigma)
+        \]
+        as an approximation of $\text{LoG}_\text{norm}$ using Gaussian filters
+        at different scales.
+    \item DoG filters are used in SIFT, which is a pipeline for detecting and
+        describing interest points.
+    \item ALso \underline{\textbf{scale-invariant}}, and follow similar
+        procedures as above.
+\end{itemize} 
+
+
+\section{Feature Description}
+
+\subsection{Simple Descriptors}
+
+\begin{itemize}
+    \item Pixel intensity
+        \begin{itemize}
+            \item[-] sensitive to absolute intensity value --- same object with
+                different illumination can have different intensity
+            \item[-] not very discriminative --- a single pixel doesn't
+                represent any local content
+        \end{itemize} 
+    \item Patch intensities
+        \begin{itemize}
+            \item[+] respresent local pattern
+            \item[+] perform well if the images are of similar intensities and roughly
+                aligned
+            \item[-] sensitive to absolute intensity value
+            \item[-] not rotation-invariant
+        \end{itemize} 
+    \item Gradient orientation
+        \begin{itemize}
+            \item[+] sensitive to intensity changes
+            \item[+] orientation is robust to scaling
+            \item[-] not rotation-invariant
+        \end{itemize} 
+    \item Histogram
+        \begin{itemize}
+            \item[+] robust to rotation
+            \item[+] robust to scaling
+            \item[-] sensitive to intensity changes
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Scale-Invariant Feature Transform (SIFT)}
+
+\begin{itemize}
+    \item detects and describe local features in images
+    \item transforms an image into a large set of interest points, each of which
+        is described by a feature vector that is \emph{\underline{invariant}} to
+        \underline{translation}, \underline{scaling}, and \underline{rotation}.
+    \item Algorithm:
+        \begin{enumerate}
+            \item detection of scale-space extrema (minima/maxima)
+
+                search across scales and pixel locations, looking for interest
+                points using DoG.
+
+            \item keypoint localisation
+
+                refine the estimate coordinates by fitting a quadratic curve to
+                the neighbouring pixels and compute the new extrema.
+
+                Denote the DoG response as $D(x,y,\sigma)$ or $D(\mathbf{x})$,
+                by Taylor expansion we have
+                \[
+                    D(\mathbf{x}+\Delta \mathbf{x})=D(\mathbf{x})
+                    +\frac{\partial D}{\partial \mathbf{x}}^T\Deta\mathbf{x}
+                    +\frac{1}{2}\Delta\mathbf{x}\frac{\partial^2 D}{\partial
+                    \mathbf{x}^2}\Delta\mathbf{x}
+                \]
+                \[
+                    \Rightarrow
+                    \frac{\partial
+                    D(\mathbf{x}+\Delta\mathbf{x})}{\partial\Delta\mathbf{x}}
+                    =\frac{\partial D}{\partial \mathbf{x}}
+                    +\frac{\partial^2D}{\partial \mathbf{x}^2}\Delta\mathbf{x}
+                    =0
+                    \Rightarrow
+                    \Delta\mathbf{x}=-{\left(\frac{\partial^2D}{\partial
+                    \mathbf{x}^2}\right)}^{-1}\frac{\partial D}{\partial \mathbf{x}}
+                \]
+
+            \item orientation assignment
+
+                determine the dominant orientation $\theta$ for a neighbourhood
+                of a keypoint
+                \begin{enumerate}
+                    \item  an orientation histogram with 36 bins covering 360
+                        degrees is created
+                    \item each pixel votes for an orientation bin, weighted by
+                        the gradient magnitude
+                    \item keypoint will be assigned an orientation, which is the
+                        peak of the historgram
+                \end{enumerate} 
+                So now we have the location $(x,y)$, scale $\sigma$, and
+                dominant orientation $\theta$.
+
+            \item keypoint descriptor
+                
+                Compute a histogram of gradient orientations. In practice,
+                subregions are used and each subregion has 4x4 samples.
+                \begin{itemize}
+                    \item each subregions has one orientation histogram
+                    \item these multiple histograms together describe what it
+                        looks like around the keypoint.
+                    \item each subregion has an orientation historgram with 8
+                        bins in 8 directions.
+                \end{itemize} 
+                If 16 subregions are used, the descriptor (feature vector) 
+                has a dimension of $128=16\times 8$.
+        \end{enumerate} 
+    \item robust to rotation, scaling, and changes in illumination
+        \begin{itemize}
+            \item rotation --- relative to dominant direction
+            \item scaling --- draw samples from a window proportional to size
+            \item changes in illumination --- using gradient orientations
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Keypoint matching}
+
+Suppose we find a keypoint $(x,y)$ in $A$ that corresponds to a keypoint $(u,v)$
+in $B$. We assume that they are reltaed with an \emph{affine} transformation:
+\[
+    \begin{pmatrix}
+        u \\
+        v
+    \end{pmatrix} 
+    =
+    \begin{pmatrix}
+        m_1 & m_2 \\
+        m_3 & m_4
+    \end{pmatrix} 
+    \begin{pmatrix}
+        x \\
+        y
+    \end{pmatrix} 
+    +
+    \begin{pmatrix}
+        t_x \\
+        t_y
+    \end{pmatrix} 
+\]
+with many pairs of corresponding keypoints, we can write the equation as:
+\[
+    \begin{pmatrix}
+        x_1 & y_1 & 0 & 0 & 1 & 0 \\
+        0 & 0 & x_1 & y_1 & 0 & 1 \\
+        x_2 & y_2 & 0 & 0 & 1 & 0 \\
+        0 & 0 & x_2 & y_2 & 0 & 1 \\
+        \vdots & \vdots & \vdots & \vdots & \vdots & \vdots
+    \end{pmatrix} 
+    \begin{pmatrix}
+        m_1 \\
+        m_2 \\
+        m_3 \\
+        m_4 \\
+        t_x \\
+        t_y
+    \end{pmatrix} 
+    =
+    \begin{pmatrix}
+        u_1 \\
+        v_1 \\
+        u_2 \\
+        v_2 \\
+        \vdots
+    \end{pmatrix} 
+\]
+which can be written as a linear system
+\[
+    A\mathbf{m}=\mathbf{b}
+\]where only $\mathbf{m}$ is unknown, and solve the least-square problem as
+\[
+    \mathbf{m}={(A^TA)}^{-1}A^T\mathbf{b}
+\]
+
+\subsection{RANSAC}
+
+However, the squared difference, $\norm{A\mathbf{m}-\mathbf{b}}^2$, can be sensitive to
+outliers(noise) --- points that are deemed to be corresponding but actually
+aren't. To ensure the robustness to outliers. RANSAC(Random Sample Consensus) deals with this.
+\begin{enumerate}
+    \item randomly sample some points
+    \item fit a line along the sampled points
+    \item find the number of \underline{\textbf{inliers}} within a threshold to
+        the line
+    \item terminate if enough inliers have been found, or we have reached a
+        certain number of iteration
+\end{enumerate} 
+
+\subsection{Acceleration}
+
+\subsubsection{Speeded-Up Robust Features (SURF)}
+
+\begin{itemize}
+    \item SURF only computes the gradients along horizontal and vertical
+        directions using \underline{\textbf{Haar wavelets}}.
+    \item SURF applies very simple filters $d_x$ and $d_y$
+        \[
+            d_x=
+            \begin{pmatrix}
+                -\mathbf{1} & \mathbf{1}
+            \end{pmatrix},
+            d_y=
+            \begin{pmatrix}
+                -\mathbf{1}^T \\
+                \mathbf{1}^T
+            \end{pmatrix} 
+        \]
+        where $\mathbf{1}^T=\begin{pmatrix}
+            1 & 1 & \ldots & 1
+        \end{pmatrix} $ called the Haar wavelets
+    \item Summing pixel intensities with weigths 1 and -1 is very fast, so the
+        result for each subregion is defined by (the sum of values and the sum
+        of absolute values)
+        \[
+            \left(\sum d_x,\sum d_y, \sum|d_x|,\sum|d_y|\right)
+        \]
+        \begin{itemize}
+            \item all four are low --- homogeneous subregion
+            \item zebra pattern/strips --- $\sum|d_x|$ or $\sum|d_y|$ is high
+            \item gradually increasing intensities --- $\sum|d_x|$ and $\sum d_x$ are
+                high
+        \end{itemize} 
+    \item Now we need $16\times 4 = 64 $ dimensions, and around 5 times faster
+        than SIFT with Haar wavelets.
+\end{itemize} 
+
+\subsubsection{Binary Robust Independent Elementary Features (BRIEF)}
+
+\begin{itemize}
+    \item we compare an interest point $p$ to another interest point $q$
+        and get a binary value as output
+        \[
+            \tau(p,q)=
+            \begin{cases}
+                1 & \text{if }I(p)<I(q) \\
+                0 & \text{otherwise}.
+            \end{cases} 
+        \]
+    \item randomly sample $n_d$ pairs of points for binary tests; random pattern
+        is only determined once and same pattern applied to all intersect
+        points.
+        \begin{itemize}
+            \item If $n_d=256$, we have 256 tests in total, with a total of 32
+                bytes (SURF uses 64 bytes).
+            \item fast to compute with bit-shifting operator \texttt{<<} and
+                \texttt{>>}.
+            \item use bitwise XOR between two descriptors to get the
+                \underline{\textbf{hamming distance}} instead of Euclidean
+                distance, which is the bit count of the result.
+        \end{itemize} 
+    \item ignores rotation and scaling, assume images are taken from a moving
+        camera with only translation.
+    \item about 40-fold faster than SURF, which is around 200 times faster than
+        SIFT.
+\end{itemize} 
+
+\subsubsection{Histograms of Oriented Gradient(HOG)}
+
+\begin{itemize}
+    \item we can extend the idea of feature descriptors to describe the feature
+        of a large region, even a whole image.
+    \item HOG divides a large region into a (dense) grid of cells, describes
+        each cell, and concatenates the local descriptions to form a global
+        description.
+    \item The description vector $\mathbf{v}$ for each cell is normalized to form a
+        locally normalized descriptor as
+        \[
+            \mathbf{v}_\text{norm}=\frac{\mathbf{v}}{\sqrt{\norm{\mathbf{v}}^2_2+\epsilon^2}}
+        \]
+        with $\epsilon$ to ensure numerical stability
+\end{itemize} 
+
+
+\section{Image Classification}
+
+\subsection{Classification concepts}
+
+See Intro to ML notes for $k$-NN, distance metrics, parameter tuning,
+cross-validation, stachastic gradient descent, multi-layer perceptron,
+forward/backward propagation
+
+
+\subsection{Support Vector Machine (SVN)}
+
+\begin{itemize}
+    \item If used as a \emph{linear} SVN, the model is formulated as
+        \[
+            \mathbf{w}\cdot\mathbf{x}+b=0
+        \]
+        The rule is to assign a class $c$ to data $x$ with
+        \[
+            c=
+            \begin{cases}
+                1 & \text{if }\mathbf{w}\cdot\mathbf{x}+b\ge 0 \\
+                -1 & \text{otherwise}
+            \end{cases} 
+        \]
+        so we need to estimate $\mathbf{w}$ and $b$ to determine the decision
+        boudnary or \emph{hyperplane}.
+    \item The problem could be transformed to an optimisation problem of
+        \[
+            \underset{\mathbf{w},b}{\text{min}}\norm{\mathbf{w}}^2
+        \]
+        subject to $y_i(\mathbf{w}\cdot \mathbf{x}_i+b)\ge 1$ for $i=1,2,\ldots,N$.
+        Or formulate as
+        \[
+            \underset{\mathbf{w},b}{\text{min}}\norm{\mathbf{w}}^2
+            +C\sum_{i=1}^{N} \max{(0,1-y_i(\mathbf{w}\cdot \mathbf{x}_i+b))}
+        \]
+        since we cannot guarantee the data to be linearly separable.
+        The second term of the above is equation is called the
+        \underline{\textbf{hinge loss}}.
+        The gradient of the loss function is
+        \[
+            \nabla_\mathbf{w}L=2\mathbf{w}-C\sum_{i=1}^{N}\nabla_\mathbf{w}h
+        \]
+        where
+        \[
+            \nabla_\mathbf{w}h=
+            \begin{cases}
+                -y_i\mathbf{x}_i & \text{if }y_i(\mathbf{w}\cdot\mathbf{x}_i+b < 1) \\
+                0 & \text{otherwise}
+            \end{cases} 
+        \]
+        so at each iteration,
+        \[
+            \mathbf{w}^{(k+1)}=\mathbf{w}^{(k)}-\eta\nabla_\mathbf{w}L(\mathbf{w}^{(k)},b^{(k)})
+        \]
+\end{itemize} 
+
+\subsection{Convolutional Neural Network}
+
+\begin{itemize}
+    \item In CNN, each neuron only see a small local region in the layer before
+        it, called the \underline{\textbf{receptive field}}.
+    \item e.g. A neuron can depend on a 5x5x$C$ cube of the input, where $C$
+        refers to the number of color channels.
+    \item More output neurons can be added as well, to form a $D$x1x1 cube,
+        where $D$ denotes depth.
+    \item Mathematically, a \underline{\textbf{convolution layer}} is
+        \[
+            a_d=f\left(\sum_{ijk}W_{dijk}x_{ijk}+b_d\right)
+        \]
+        where $d$ is the depth of output, $ij$ is the dimension coordinate, and
+        $k$ is the input channel/depth.
+    \item operations during convolution:
+        \begin{itemize}
+            \item \underline{\textbf{padding}}
+            \item \underline{\textbf{stride}}
+            \item \underline{\textbf{dilation}}: make a neuron look at a larger
+                region (increase receptive field) by downsample image or increase kernel size
+        \end{itemize} 
+    \item \underline{\textbf{Pooling layer}}:
+        \begin{itemize}
+            \item operation to make feature maps/representations smaller
+            \item similar to image downsampling, e.g. if max pooling, 
+                \[
+                    \begin{pmatrix}
+                        1 & 2 \\
+                        5 & 6
+                    \end{pmatrix} 
+                    \Rightarrow
+                    \begin{pmatrix}
+                        6
+                    \end{pmatrix} 
+                \]
+                pick the max element, and reduce the dimension
+        \end{itemize} 
+    \item issue:
+        \begin{itemize}
+            \item  \emph{exploding} gradient --- clip it, such as clip by value
+                \[
+                    \mathbf{g}_i=
+                    \begin{cases}
+                        v_\text{min} & \text{if }g_i<v_\text{min} \\
+                        v_\text{max} & \text{if }g_i>v_\text{max} \\
+                        \mathbf{g}_i & \text{otherwise}
+                    \end{cases} 
+                \]
+                or clip by norm
+                \[
+                    \mathbf{g}=
+                    \begin{dcases}
+                        \frac{\mathbf{g}}{\norm{\mathbf{g}}}v & \text{if }
+                        \norm{\mathbf{g}}>v \\
+                        \mathbf{g} & \text{otherwise}
+                    \end{dcases} 
+                \]
+            \item \emph{vanishing} gradient --- use different activation
+                functions, e.g. ReLU, leaky RelU, or
+                \begin{itemize}
+                    \item Parametric ReLU
+                        \[
+                            f(z)=
+                            \begin{cases}
+                                az & z < 0 \\
+                                z & z \ge 0
+                            \end{cases} 
+                        \]
+                    \item Exponential Linear Unit
+                        \[
+                            f(z)=
+                            \begin{cases}
+                                a(e^z-1) & z < 0 \\
+                                z & z \ge 0
+                            \end{cases} 
+                        \]
+                \end{itemize} 
+        \end{itemize}
+    \item Representative CNN: LeNet, AlexNet, VGG
+\end{itemize} 
+
+\section{Object Detection}
+
+\subsection{Approaches}
+
+\begin{itemize}
+    \item general ideas
+        \begin{itemize}
+            \item at each sliding window, perform two tasks.
+            \item Firstly, classification (whether this is a cat or not)
+            \item secondly, localisation (bounding box coordinates) using CNN to
+                predict bounding coordinates
+            \item however, too expensive to apply CNN on each pixel of the image
+        \end{itemize} 
+    \item two-stage detection:
+        \begin{enumrate}
+            \item make an initial guess, propose some possible regions of
+                interest
+            \item classify what these regions are and predict the bounding boxes
+        \end{enumrate} 
+    \item One-stage detection:
+        \begin{itemize}
+            \item do not guess, but simply divide the image into grid cells
+            \item classify these grid cells and predict the bounding boxes
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Two-stage Object Detection Methods}
+
+\subsubsection{Selective Search}
+
+We can look at image features such as greyscale or gradients to separate the
+image into regions with similar features.
+
+\subsubsection{Faster R-CNN}
+
+\begin{itemize}
+    \item A \underline{\textbf{Region Proposal Network}} (RPN) is used.
+    \item The input image is fed into a CNN, gives the image's feature map.
+    \item The feature map goes into a RPN, outputing interesting regions to be
+        looked at.
+    \item Using AlexNet/VGG-16 as \underline{\textbf{backbone networks}}, using
+        their last convolution layer as a feature map, we can use a $3\times 3$
+        sliding window to perform binary classification at each location,
+        giving it 0 if it isn't interesting, and 1 if it is.
+    \item it handles objects of different sizes / aspect ratio by making $k$
+        predictions(bounding boxes). e.g. $128^2$, $256^2$, $512^2$, $1:1$,
+        $1:2$, $2:1$. These bounding boxes are called
+        \underline{\textbf{anchors}}.
+    \item A bounding box can be described by its centre coordinates $(x,y)$ and
+        size $(w,h)$.
+    \item For a convolution feature map of $W\times H$, $W\times H \times k$
+        anchors are predicted, and only the highest scoring boxes are kept.
+    \item The loss is defined as
+        \[
+            L(p,t) = \underbrace {\sum_{i=1}^{n_\text{anchor}} 
+            L_\text{cls}(p_i,p_i^*)}_{\text{classification loss}} +
+            \underbrace{\lambda\sum_{i=1}^{n_\text{anchor}}
+            1_{y=1}L_\text{loc}(t_i,t_i^*)}_{\text{localisation loss}}
+        \]
+        where $^*$ denotes the ground truth
+    \item we predict how to transform this anchor into the ground truth bounding
+        box using:
+        \begin{align*}
+            \text{anchor} & = (x_a, y_a, w_a, h_a) \\
+            \text{predicted bounding box} & = (x,y,w,h) \\
+            \text{predicted transformation} & = (t_x,t_y,t_w,t_h) \\
+            t_x & = \frac{x-x_a}{w_a} \\
+            t_y & = \frac{y-y_a}{h_a} \\
+            t_w & = \log{\frac{w}{w_a}} \\
+            t_h & = \log{\frac{h}{h_a}}
+        \end{align*} 
+\end{itemize} 
+
 
 \end{document}
