@@ -1166,6 +1166,8 @@ image into regions with similar features.
 
 \subsubsection{Faster R-CNN}
 
+\subsubsubsection{\textbf{RPN}}
+
 \begin{itemize}
     \item A \underline{\textbf{Region Proposal Network}} (RPN) is used.
     \item The input image is fed into a CNN, gives the image's feature map.
@@ -1203,6 +1205,141 @@ image into regions with similar features.
             t_h & = \log{\frac{h}{h_a}}
         \end{align*} 
 \end{itemize} 
+
+\subsubsubsection{\textbf{RoI}}
+
+\begin{itemize}
+    \item Combining classification and localisation, we have features for each
+        region known as \underline{\textbf{RoI}} (Region of Interest). We can
+        use an RoI pooling layer, which we can calculate RoI location and size
+        on the feature map and convert to a fixed size to be provided to the
+        classifier.
+    \item For each RoI, the classifier predicts the label class and refines the
+        bounding box estimate:
+        \[
+            L(p,t)=L_\text{cls}(p,y)+\lambda\cdot 1_{y\ge 0}L_\text{loc}(t,t^*)
+        \]
+        where $y$ denotes the ground truth, and is now a multi-class
+        classification problems.
+\end{itemize} 
+
+\subsubsubsection{\textbf{Comparison between RPN and Detection Network}}
+
+Please see table \ref{table:rpn-roi}.
+
+\begin{table}[h]
+    \centering
+    \caption{RPN v.s. RoI}
+    \label{table:rpn-roi}
+    \begin{tabular}{c|c}
+        RPN & Detection network \\
+        \hline \hline
+        \rule{0mm}{12mm}
+        \shortstack{The input to RPN is a $3\times 3$ \\
+            window on conv5 feature map.} &
+        \shortstack{The input to detection network \\is a proposed region, thus 
+            \\contains more accurate features.} \\
+        \hline
+        \rule{0mm}{8mm}
+        \shortstack{It is class-agnostic. It only checks \\
+            whether this is an RoI or not.} &
+        \shortstack{It classifies the region \\into a number of classes.} \\
+        \hline
+        \rule{0mm}{12mm}
+        \shortstack{RPN needs to use a lot of anchors, \\
+            because we do not know what \\
+            the object looks like yet} & 
+        \shortstack{It does not need to use anchors.\\
+        We already know a rough size \\from the proposal.}
+    \end{tabular} 
+\end{table} 
+
+\subsection{One-stage Object Detection Methods}
+
+\begin{itemize}
+    \item e.g. YOLO, SSD. The RPN is changed from using a binary value for the
+        classification loss to using a multi-class classifier, which predicts the object
+        for each anchor.
+    \item Faster R-CNN is more accurate but slower, and vice versa for SSD,
+        since RPN estimates the regions size before looking closely at features
+        and then refining it.
+    \item Backbone networks (VGG/AlexNet) can be changed out to improve
+        performance.
+\end{itemize} 
+
+\section{Image Segmentation}
+
+\subsection{Thresholding}
+
+This converts a greyscale image to a binary label map. At each pixel, the label
+is defined as
+\[
+    f(x)=
+    \begin{cases}
+        1 & \text{if }I(x)\ge \text{threshold} \\
+        0 & \text{otherwise}.
+    \end{cases} 
+\]
+This  doesn't require any training data, and only needs threshold as the
+parameter.
+
+\subsection{$K$-means}
+
+\begin{itemize}
+    \item Represents each cluster by its centre.
+        Each data point (pixel intensity) is associated to the nearest cluster
+        centre.
+    \item It can be formulated as
+        \begin{equation}\label{eq:KNN}
+            \text{min}\sum_{k=1}^{K} \sum_{x\in C_k}{(x-\mu_k)}^{2}
+            \quad\text{or}\quad
+            \text{min}\sum_{k=1}^{K} \sum_{x}\delta_{x,k}{(x-\mu_k)}^{2}
+        \end{equation} 
+        where $\delta_{x,k}$ denotes membership of $x$ in cluster $k$, $\mu_k$
+        denotes the centre of cluster $k$.
+    \item Algorithm
+        \begin{enumerate}
+            \item initialize $\mu_k$, where $k=1,2,\ldots,K$.
+            \item For each iteration
+                \begin{enumerate}
+                    \item  compute $\delta_{x,k}$ for each data point, assigning
+                        $x$ to the nearest cluster centre $\mu_k$.
+                    \item update $\mu_k$ according to the membership
+                        $\delta_{x,k}$.
+                    \item repeat until $\delta_{x,k}$ no longer changes or the
+                        maximum number of iterations is reached.
+                \end{enumerate} 
+        \end{enumerate} 
+    \item To determine which $K$ to use, plot equation \eqref{eq:KNN} with
+        different $K$, and use the ``elbow'' method to determine the best value.
+    \item clustering can also be performed base on
+        \begin{itemize}
+            \item color similarity
+            \item position + color similarity
+            \item other features
+        \end{itemize} 
+        so that $x$ becomes a feature vector instead of a scalar.
+\end{itemize} 
+
+\subsection{Gaussian Mixture Model (GMM)}
+
+\begin{itemize}
+    \item GMM performs a \emph{soft} assignment by assuming a Gaussian
+        distribution for each cluster, formulated as
+        \[
+            P(y_j=k|x_j,\pi_k,\mu_k,\sigma_k)=
+            \pi_k\cdot \frac{1}{\sqrt{2\pi}\sigma_k}
+            e^{-\frac{{(x-\mu_k)}^{2}}{2\sigma^2_k}}
+        \]
+        where $x_j$ is the intensity of feature for data point $j$,
+        $\pi_k$ is the mixing component for class $k$, $y_j$ denotes the group
+        which point $j$ belongs to.
+    \item See intro to ML for detailed algorithm.
+\end{itemize} 
+
+\subsection{CNN}
+
+
 
 
 \end{document}
