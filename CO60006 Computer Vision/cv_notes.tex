@@ -1286,6 +1286,7 @@ parameter.
 \subsection{$K$-means}
 
 \begin{itemize}
+    \item unsupervised method
     \item Represents each cluster by its centre.
         Each data point (pixel intensity) is associated to the nearest cluster
         centre.
@@ -1324,6 +1325,7 @@ parameter.
 \subsection{Gaussian Mixture Model (GMM)}
 
 \begin{itemize}
+    \item unsupervised method
     \item GMM performs a \emph{soft} assignment by assuming a Gaussian
         distribution for each cluster, formulated as
         \[
@@ -1338,6 +1340,43 @@ parameter.
 \end{itemize} 
 
 \subsection{CNN}
+
+\begin{itemize}
+    \item supervised method
+    \item we can e.g. remove the fully connected layers and
+        directly infer pixel-wise classification results 
+        from the $13\times 13$ feature map
+    \item \underline{\textbf{Fully convolutional network}}: all layers are
+        convolutional layers.
+    \item \underline{\textbf{Convolutionalization}}: replaces the fully
+        connected layers with convolutional layers
+    \item Need to apply \underline{\textbf{upsampling}} operation to obtain a
+        pixel-wise prediction
+        \begin{itemize}
+            \item e.g. transposed convolution. 
+                For $\mathbb{R}^{4\times 4}\mapsto\mathbb{R}^{8\times 8}$,
+                we can have one input correspond to a $3\times 3$ region in the
+                output, with some weight, with a stride of 2.
+            \item convolution in 1D as matrix operation v.s. 2D, see figure
+                \ref{fig:conv1d}.
+                \begin{figure}[h]
+                  	\includegraphics[scale=0.29]{1d-convolution.png}
+                  	\centering
+                  	\caption{convolution v.s. transposed convolution in Matrix
+                    operation}\label{fig:conv1d}
+                \end{figure}
+                
+        \end{itemize} 
+    \item Thus a classification network can be transformed to a segmentation
+        network by replacing the fully connected layers with convolutional and
+        transposed convolutional layers.
+    \item \underline{\textbf{Mask R-CNN}}
+        \begin{itemize}
+            \item the input is the convlution feature map
+            \item fed into two branches: detection and segmentation
+            \item segmentation branch is fully convolutional
+        \end{itemize} 
+\end{itemize} 
 
 
 
