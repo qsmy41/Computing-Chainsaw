@@ -537,7 +537,7 @@ we can compute the magnitude and the orientation as
         \emph{low-level} features.
 \end{itemize} 
 
-\subsection{Harris Detection}
+\subsection{Harris Detection}\label{harris detector}
 
 \begin{itemize}
     \item small windows to tell if it is a corner
@@ -1373,12 +1373,293 @@ parameter.
     \item \underline{\textbf{Mask R-CNN}}
         \begin{itemize}
             \item the input is the convlution feature map
-            \item fed into two branches: detection and segmentation
+            \item fed into two branches: detection and segmentation, so
+                perrforming two tasks at the same time
             \item segmentation branch is fully convolutional
         \end{itemize} 
 \end{itemize} 
 
+\section{Motion}
 
+\subsection{Definition}
+
+\begin{itemize}
+    \item \underline{\textbf{Optic Flow}}: The motion (flow) of brightness
+        patterns (optic) in videos. 
+    \item The output of optic flow methods is a flow
+        field, which describes the displacement vector for each pixel in the
+        image.
+    \item Assumption in optic flow:
+        \begin{itemize}
+            \item brightness constancy
+            \item small motion
+            \item spatial coherence
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Optic flow constraint}
+
+\begin{itemize}
+    \item Based on \underline{brightness constancy} assumption, we have
+        \[
+            I(x+u,y+v,t+1)=I(x,y,t)
+        \]
+        where $I$ is the intensity, $(x,y,t)$ is the spatial and temporal
+        coordinate, and $(u,v)$ is the displacement
+    \item Based on \underline{small motion} assumption, using first-order Taylor
+        expansion we can approximate
+        \[
+            \frac{\partial I}{\partial x}u+\frac{\partial I}{\partial y}v
+            +\frac{\partial I}{\partial t}=0
+            \quad\text{or}\quad
+            I_xu+I_yv+I_t=0
+        \]
+\end{itemize} 
+
+\subsection{Lucas-Kanade method}
+
+\begin{itemize}
+    \item At each pixel $p$, we have the optic flow constraint equation
+        \[
+            \begin{pmatrix}
+                I_x(p) & I_y(p)
+            \end{pmatrix} 
+            \begin{pmatrix}
+                u \\
+                v
+            \end{pmatrix} 
+            =
+            -I_t(p)
+        \]
+    \item For a small neighbourhood, e.g. a $3\times 3$ window,
+        we have a system of linear equations,
+        \[
+            \begin{pmatrix}
+                I_x(p_1) & I_y(p_1) \\
+                I_x(p_2) & I_y(p_2) \\
+                \vdots & \vdots \\
+                I_x(p_N) & I_y(p_N) \\
+            \end{pmatrix} 
+            \begin{pmatrix}
+                u \\
+                v
+            \end{pmatrix} 
+            =
+            -\begin{pmatrix}
+                    I_t(p_1) \\
+                    I_t(p_2) \\
+                    \vdots \\
+                    I_t(p_N)
+            \end{pmatrix} 
+        \]
+        equivalently a problem of the form $Ax=b$.
+    \item solution is given by
+        \begin{equation}\label{eq:optic_flow}
+            x=(A^TA)^{-1}A^Tb
+        \end{equation} 
+        where
+        \[
+            x=\begin{pmatrix}
+                u \\ 
+                v
+            \end{pmatrix} 
+            ,A^TA=\sum_p
+            \begin{pmatrix}
+                I_x^2 & I_xI_y \\
+                I_xI_y & I_y^2 
+            \end{pmatrix} 
+            ,A^Tb=-\sum_p
+            \begin{pmatrix}
+                I_xI_t \\
+                I_yI_t
+            \end{pmatrix} 
+        \]
+    \item Note that the matrix $A^TA$ also appears in the Harris detector
+        \ref{harris detector}.
+    \item Using concepts in linear algebra, since
+        \[
+            \text{cond}(A^TA)=\frac{\lambda_\text{max}}{\lambda_\text{min}}
+        \]
+        for flat regions, we have large condition number $\Longrightarrow$
+        unstable calculation of the inverse; for corner regions, we have larger
+        $\lambda_\text{min}$, so smaller condition number $\Longrightarrow$ more
+        stable inverse calculation.
+
+        Intuitively, the motion of flat/edge region couldn't be figured around a
+        small neighbourhood accurately, but a corner is fine.
+    \item \underline{\textbf{multi-scale}}: motion at different scale. For each
+        scale $l$ from coarse to fine
+        \begin{enumerate}
+            \item upsample the flow estimate at previous scale $l+1$ with
+                \[
+                    u^{(l)}=2u^{(l+1)},
+                    v^{(l)}=2v^{(l+1)}
+                \]
+            \item compute the warped image
+                \[
+                    J_\text{warped}^l=J^l(x+u^{(l)},y+v^{(l)})
+                \]
+            \item for image $I^l$ and $J_\text{warped}^l$ at this scale, compute
+                the image gradients $I_x$, $I_y$ and $I_t$.
+                \begin{itemize}
+                    \item $I_x$ and $I_y$ are caluclated from image $I^l$.
+                    \item $I_t=J_\text{warped}^l(x,y)-I^l(x,y)$.
+                \end{itemize} 
+            \item estimate the incremental flow using
+                \[
+                    \begin{pmatrix}
+                        u^\delta \\
+                        v^\delta
+                    \end{pmatrix} 
+                    =
+                    {(A^TA)}^{-1}A^Tb
+                \]
+            \item update the flow at scale $l$: $u^{(l)}=2u^{(l+1)}+u^\delta$,
+                $v^{(l)}=2v^{(l+1)}+v^\delta$.
+        \end{enumerate} 
+    \item For \underline{\emph{object tracking}}, the optimisation problem
+        becomes
+        \[
+            \underset{u,v}{\text{min}}E(u,v)=\sum_x\sum_y
+            {[I(x,y)-J(x+u,y+v)]}^{2}
+        \]
+        where $x,y$ are pixels in the \textbf{template image}, $u,v$
+        indicates the motion from template $I$ to image $J$.
+        The solution is the same as equation \eqref{eq:optic_flow}.
+\end{itemize} 
+
+\subsection{Horn-Schunck Method}
+
+\begin{itemize}
+    \item an optimisation-based method, defining a global energy
+        \textbf{functional} (a cost function) for the flow for all the pixels
+        \begin{align*}
+            E(u,v)
+            & =\iint_{(x,y)\in\Omega}
+            \underbrace{{(I_xu+I_yv+I_t)}^{2}}_{\text{optic flow constraint}}
+            +
+            \underbrace{\alpha}_\text{weight}
+            \underbrace{({|\nabla u|}^{2}+{|\nabla v|}^{2})}_
+            \text{\shortstack{smoothness term \\for the flow}}
+            \;\mathrm{d}x\mathrm{d}y \\
+            & :=\iint_{(x,y)\in\Omega}L(x,y,u,v,u_x,u_y)\mathrm{d}x\mathrm{d}y
+        \end{align*} 
+        where $u=u(x,y)$ and $v=v(x,y)$ are the unknown \textbf{functions} 
+        defined on the image pixels.
+        They are solved by minimising the energy function $E(u,v)$.
+    \item minismizing the functional comes down to solving its associated
+        Euler-Lagrange equation,
+        \begin{align*}
+            \frac{\partial L}{\partial u}-\frac{\partial}{\partial
+            x}\frac{\partial L}{\partial u_x}-\frac{\partial}{\partial
+            y}\frac{\partial L}{\partial u_y} & = 0 \\
+            \frac{\partial L}{\partial v}-\frac{\partial}{\partial
+            x}\frac{\partial L}{\partial v_x}-\frac{\partial}{\partial
+            y}\frac{\partial L}{\partial v_y} & = 0
+        \end{align*} 
+        this follows that
+        \begin{align*}
+            (I_xu+I_yv+I_t)I_x-\alpha\Delta u & = 0 \\
+            (I_xu+I_yv+I_t)I_y-\alpha\Delta v & = 0
+        \end{align*} 
+        where $\Delta:=\partial_{xx}+\partial_{yy}$.
+    \item In practice, the Laplacian $\Delta u$ can be approximated using finite
+        differences
+        \[
+            \Delta u=\overline{u}-u
+        \]
+        where $\overline{u}$ is the local average within a small neighbourhood.
+    \item Plug in the approximation for $\Delta u$ and reorganize, we obtain
+        \begin{align*}
+            (I_x^2+\alpha)u+I_xI_yv & = \alpha \overline{u}-I_xI_t \\
+            I_xI_yu+(I_y^2+\alpha)v & = \alpha \overline{v}-I_yI_t
+        \end{align*} 
+        becoming an equation system for $u$ and $v$, which can be solved as
+        \begin{align*}
+            u & = \overline{u}-\frac{I_x(I_x \overline{u}+I_y \overline{v}+I_t}
+            {I_x^2+I_y^2+\alpha} \\
+            v & = \overline{v}-\frac{I_y(I_x \overline{u}+I_y \overline{v}+I_t}
+            {I_x^2+I_y^2+\alpha}.
+        \end{align*} 
+        thus $u$, $v$, $\overline{u}$, $\overline{v}$ can be estimated iteratively.
+\end{itemize} 
+
+\subsection{Learning-based Flow Method}
+
+\begin{itemize}
+    \item A CNN takes in an input (two frames of an image), and outputs a flow
+        field, visualized with a displacement vector at each pixel.
+    \item The average End-point Error (EE) can be used to evaluate the
+        performance of an optic flow method if the ground truth is available
+        \[
+            \text{EE}=\frac{1}{N}\sqrt{{(u(x,y)-u_\text{GT}(x,y))}^{2}+{(v(x,y)-v_\text{GT}(x,y))}^{2}}
+        \]
+\end{itemize} 
+
+
+\subsection{Correlation Filter}
+
+\begin{itemize}
+    \item In a correlation filter,
+        we aim to maximise the correlation between tempalte
+        features and image features in the next time frame
+        \[
+            (f*h)[n]=\sum_{m=-\infty}^{\infty}f[m]h[n+m]
+        \]
+    \item The correlation can be more robust to illumination changes 
+        than sum of squared difference.
+    \item In 2D images, we have a search window (in the next time frame) and a
+        box with the same size as the template. We can find where the
+        correlation achieves the maximum between the template features and
+        features in a search window.
+    \item The features can be learnt from CNNs.
+\end{itemize} 
+
+\subsection{Tracking by Detection}
+
+\begin{itemize}
+    \item tracking v.s. detection
+        \begin{itemize}
+            \item tracking concerns about videos
+            \item In tracking, we have initial bounding box. We are only
+                interested in how this object moves. We do not need to detect
+                every object.
+        \end{itemize} 
+    \item \underline{\textbf{online learning}} and \underline{\textbf{offline learning}}
+        \begin{itemize}
+            \item online: using information from
+                this video, while it is streamed.
+            \item offline: using information from
+                an existing trainign set.
+        \end{itemize} 
+        Prefered method here is online learning.
+    \item At each sliding window, we perform two tasks 
+        \begin{enumerate}
+            \item perform \textbf{binary} classification
+            \item localisation to enable us to adjust the size of the object
+                during tracking
+        \end{enumerate} 
+    \item The positive and negative smaples for binary classification are
+        extracted from the first time frame. More samples can be generated by
+        \begin{itemize}
+            \item data augmentation: translation, rotation, etc.
+            \item using more time frames while the video is streamed.
+        \end{itemize} 
+    \item Most layers of the convolutional network are pre-trained offline using
+        large datsets such as ImageNet.
+    \item Only the last few layers are trained online, using a lot of samples
+        extracted from the video.
+\end{itemize} 
+
+\subsection{Action Recognition}
+
+We use both image and motion information as inputs
+\begin{itemize}
+    \item image: static features extracted from a single image
+    \item motion: dynamic features extracted from videos, e.g. optic
+        flow fields
+\end{itemize} 
+to train a classifier for action recognition.
 
 
 \end{document}
