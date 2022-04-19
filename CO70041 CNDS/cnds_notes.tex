@@ -15,7 +15,7 @@
 \usepackage{textcomp} % for using degree symbol
 \usepackage{hyperref} % for clickable link in the pdf & customizable reference text
 \usepackage[all]{hypcap} % for clickable link to images instead of caption
-\usepackage[margin=0.5in]{geometry} % default is 1.5in
+\usepackage[margin=1.0in]{geometry} % default is 1.5in
 % \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
 \usepackage[title]{appendix} % for attaching appendix
 \allowdisplaybreaks % allow page breaking in display maths, like align
@@ -272,7 +272,7 @@ possible.
 \quad
 
 \begin{figure}[h]
-  	\includegraphics[scale=0.27]{obj_ref.png}
+  	\includegraphics[scale=0.21]{obj_ref.png}
   	\centering
     \caption{Reference within the object}
 \end{figure}
@@ -300,13 +300,13 @@ possible.
         document
 \end{itemize} 
 
-\begin{figure}
+\begin{figure}[h]
   	\includegraphics[scale=0.35]{xml.png}
   	\centering
     \caption{an example for XML}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
   	\includegraphics[scale=0.35]{xml_schema.png}
   	\centering
     \caption{an example for XML Schema}
@@ -325,7 +325,7 @@ possible.
     \item string: ``\textlangle sequence of Unicode character\textrangle'' with usual escapes
 \end{itemize} 
 
-\begin{figure}
+\begin{figure}[h]
   	\includegraphics[scale=0.3]{JSON.png}
   	\centering
     \caption{an example for JSON}
@@ -350,7 +350,7 @@ possible.
         \end{enumerate} 
 \end{itemize} 
 
-\begin{figure}
+\begin{figure}[h]
   	\includegraphics[scale=0.3]{java_serialization.png}
   	\centering
     \caption{an example for Java Object Serialization}
@@ -500,7 +500,7 @@ type compatibility}.
 
 \subsubsection{Best Effort (Maybe) semantics}
 
-As shown in the following figure, there is \emph{no fault tolerance measures}.
+As shown in the following, there is \emph{no fault tolerance measures}.
 
 \begin{figure}[h]
   	\includegraphics[scale=0.35]{maybe_semantics.png}
@@ -512,12 +512,12 @@ server, with repsect to the client, up to the application programmer.
 
 \subsubsection{At least once semantics}
 
-As shown in the following figure, retries up to $n$ times 
+As shown in the following, retries up to $n$ times 
 --- if the call succeeds then procedure has been
 executed once or more times since duplicate messages may have been generated.
 
 \begin{figure}[h]
-  	\includegraphics[scale=0.35]{ato_semantics.png}
+  	\includegraphics[scale=0.27]{ato_semantics.png}
   	\centering
 \end{figure}
 
