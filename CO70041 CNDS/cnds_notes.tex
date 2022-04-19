@@ -243,6 +243,397 @@ possible.
         e.g. how datagram, socket, port are used.
 \end{itemize} 
 
+\section{Complex Data Representation}
+
+\subsection{Definition}
+
+\begin{itemize}
+    \item \textbf{Marshalling} takes a collection of data items and transform
+        them in a format suitable for transmission.
+    \item \textbf{Unmarshalling} reconstitutes the data values and data
+        structures from the bytes received.
+\end{itemize} 
+
+\subsection{Encoding structures}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{encode_struct.png}
+  	\centering
+\end{figure}
+
+\subsection{Composed structures}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{composed_struct.png}
+  	\centering
+\end{figure}
+
+\subsection{Object references(pointers)}
+\quad
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.27]{obj_ref.png}
+  	\centering
+    \caption{Reference within the object}
+\end{figure}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.27]{ref_transmitted.png}
+  	\centering
+    \caption{Reference to objects already transmitted}
+\end{figure}
+
+\subsection{Extensible Markup Language (XML)}
+
+\begin{itemize}
+    \item \textbf{element}: container for data, enclosed by start and end tag.
+        can contain other elements.
+    \item \textbf{attribute}: used to label data --- usually name/value
+    \item \textbf{namespace}: used to scope names
+        \begin{itemize}
+            \item defining a set of names each for a collection of 
+                element types and attributes referenced by a url 
+            \item specify namespace by \texttt{xmlns} attributes
+            \item can use namespace name as prefix for names
+        \end{itemize} 
+    \item \textbf{schema}: defines elements and attributes that can appear in a
+        document
+\end{itemize} 
+
+\begin{figure}
+  	\includegraphics[scale=0.35]{xml.png}
+  	\centering
+    \caption{an example for XML}
+\end{figure}
+
+\begin{figure}
+  	\includegraphics[scale=0.35]{xml_schema.png}
+  	\centering
+    \caption{an example for XML Schema}
+\end{figure}
+
+
+\subsection{JSON}
+
+\begin{itemize}
+    \item structural tokens: [ \{ ] \} : ,
+    \item literal name tokens: \texttt{true}, \texttt{false}, \texttt{null}
+    \item value: \texttt{object}, \texttt{array}, \texttt{number},
+        \texttt{string}, \texttt{true}, \texttt{false}, \texttt{null}.
+    \item object: \{ \texttt{string} : \texttt{value}, \texttt{string} : \texttt{value}, \ldots\}
+    \item array: [ \texttt{value}, \texttt{value}, \ldots]
+    \item string: ``\textlangle sequence of Unicode character\textrangle'' with usual escapes
+\end{itemize} 
+
+\begin{figure}
+  	\includegraphics[scale=0.3]{JSON.png}
+  	\centering
+    \caption{an example for JSON}
+\end{figure}
+
+
+\subsection{Java Object Serialization}
+
+\begin{itemize}
+    \item Type (class) information is included with the serialization.
+    \item Reference to other objects are treated as \emph{handles}.
+    \item \textbf{Reflection}: the ability to query a class for the name and
+        types of its attributes and methods
+    \item Reflection allows for generic code for marshalling and unmarshalling.
+    \item steps of serialization
+        \begin{enumerate}
+            \item write class information
+            \item write types and names of instance variables
+            \item if instance variables are of a new class, then repeat the
+                above two steps for those variables
+            \item uses serialization
+        \end{enumerate} 
+\end{itemize} 
+
+\begin{figure}
+  	\includegraphics[scale=0.3]{java_serialization.png}
+  	\centering
+    \caption{an example for Java Object Serialization}
+\end{figure}
+
+\subsection{Liminations}
+
+\begin{itemize}
+    \item Representations can have similar syntax but different meaning
+        \begin{itemize}
+            \item e.g. rectangular or polar coordinates, transformation is
+                application dependent
+        \end{itemize} 
+    \item Type may have no meaning outside own context
+        \begin{itemize}
+            \item e..g pointer, file name
+        \end{itemize} 
+    \item Procedures passed as parameters
+        \begin{itemize}
+            \item cannot always transfer code to different computer for
+                execution
+        \end{itemize} 
+\end{itemize} 
+
+
+\section{Remote Procedure Calls (RPCs)}
+
+\subsection{RPC Interactions}
+
+\begin{enumerate}
+    \item Client is suspended until the call completes.
+    \item Request must include name of the operation and parameters passed
+        \emph{by value}.
+    \item Server operates locally and sends the result (in one or
+        multiple messages).
+    \item Client decodes result and returns it to the calling procedure, which
+        then continues processing.
+\end{enumerate} 
+
+\subsection{Stub Procedures}
+
+\begin{itemize}
+    \item Client-side definition: the implementation of encoding parameters,
+        send request messages, wait for reply and decode the reply and return.
+    \item Server-side definition: the implementation of receive request,
+        identify local procedure, decode parameters, call the
+        procedure, encode and send the result.
+    \item what \textbf{stubs} do in general:
+        \begin{itemize}
+            \item parameter marshalling (packing)
+            \item unmarshal (unpack) received messages and assign values to
+                parameters
+            \item transform data representations if necessary
+            \item access communication primitives to send/receive messages.
+        \end{itemize} 
+    \item Stubs can be automatically generated from an \emph{interface
+        specification}.
+\end{itemize} 
+
+\subsection{Dispatcher}
+
+It maps incoming calls onto relevant procedure (stub).
+Dispatcher at server receives all ``call'' messages and uses procedure
+number (name) to identify called procedure.
+
+\subsection{Interface Compiler}
+\begin{itemize}
+    \item generates a number for each procedure in interface 
+        -- inserted into call message by client stub procedure.
+    \item generates the stub code and the skeleton code which can then
+        be compiled with the client and the server.
+    \item needs to be specified by the \textbf{Interface Definition
+        Language (IDL)} to
+        \begin{itemize}
+            \item define the types that can be used
+            \item define the interfaces and procedures that can be
+                called
+            \item define the direction of the parameters: in, out, inout
+            \item mappings to specific languages
+            \item e.g. the following
+                \begin{figure}[h]
+                    \includegraphics[scale=0.3]{IDL.png}
+                    \centering
+                \end{figure}
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Interface Type Checking}
+
+\subsubsection{Same Interface}
+
+\begin{itemize}
+    \item Identity can be specified, e.g.
+        \begin{itemize}
+            \item checksum over source
+            \item name + timestamp of last modification or compilation
+        \end{itemize} 
+    \item  Client and server hold identity of interface.
+    \item While connecting, check type identities are equal.
+    \item This provides \textbf{strong type compatibility}.
+\end{itemize} 
+
+\subsubsection{Allow subtyping}
+
+Permit server to be subtype of client interface, i.e.\ provides
+additional operations which are not used by client, but must snot modify
+operations in original interface.
+
+\subsubsection{Structural Compability}
+
+Maintain run-time representation of interface and check for structural
+compatibility when client connects to server. The two interfaces shown in
+Figure~\ref{fig:wtc} are structurally equivalent. This provides \textbf{weak
+type compatibility}.
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{weak_type_compatibility.png}
+  	\centering
+    \caption{weak type compatibility example}\label{fig:wtc}
+\end{figure}
+
+
+\subsection{Binding}
+
+\begin{itemize}
+    \item definition:
+        \begin{itemize}
+            \item connecting to a specific server
+            \item assignment of a reference value (e.g. address or object
+                reference) to a placeholder (e.g. message port or object
+                reference variable)
+        \end{itemize} 
+    \item \textbf{Name server} (or \textbf{directory server}) is used to
+        register exported interfaces and is queried to locate a server when an
+        interface is imported.
+        \begin{itemize}
+            \item When a server starts it \emph{exports} a reference to the
+                interface to the name server.
+            \item When a client wants to use a service it connects to the name
+                server and \emph{imports} a reference to the server.
+        \end{itemize} 
+    \item Please refer to the coursework code to see how Java RMI binds client
+        with server.
+\end{itemize} 
+
+\subsection{Failure}
+
+\subsubsection{Best Effort (Maybe) semantics}
+
+As shown in the following figure, there is \emph{no fault tolerance measures}.
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{maybe_semantics.png}
+  	\centering
+\end{figure}
+\noindent The semantics is lightweight, but leaves issues of state consistency of the
+server, with repsect to the client, up to the application programmer.
+
+
+\subsubsection{At least once semantics}
+
+As shown in the following figure, retries up to $n$ times 
+--- if the call succeeds then procedure has been
+executed once or more times since duplicate messages may have been generated.
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{ato_semantics.png}
+  	\centering
+\end{figure}
+
+\noindent This is useful for \textbf{idempotent} server operations, i.e.\ multiple
+executions leave the same effect on server state as a single execution.
+
+
+\subsubsection{At most once semantics}
+
+\begin{itemize}
+    \item Guarantees that the remote procedure is either not executed or
+        executed once.
+    \item The server must 
+        \begin{itemize}
+            \item keep track of request identifiers and discard 
+                retransmitted requests that have not completed execution.
+            \item buffer replies and retransmit until acknowledged by the client.
+            \item not crash to guarantee at-most-once semantics
+        \end{itemize} 
+    \item It effectively achieves exactly-once semantics if no errors or
+        exceptions have occurred.
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{semantics.png}
+  	\centering
+  	\caption{Failure semantics comparison}
+\end{figure}
+
+\subsubsection{Zero or once (Transactional) semantics}
+
+\begin{itemize}
+    \item Guarantees that either the procedure is completely executed or it is
+        not executed at all.
+    \item The server must implement an \emph{atomic transaction for each RPC}.
+        \begin{itemize}
+            \item either the state data in the server is updated permanently by
+                an operation taking it from one consistent state to another
+            \item or it is left in its original state, if the call is aborted or
+                a failure occurs.
+        \end{itemize} 
+    \item This requires ACID (Atomicity, Consistency, Isolation, Durability)
+        properties and implemented by a \emph{two-phase commit} type of
+        protocol.
+        \begin{itemize}
+            \item phase 1: prepares all the aspects of the transaction
+            \item phase 2: permanently commit or abort them
+        \end{itemize} 
+\end{itemize} 
+
+\subsubsection{Server Failure}
+
+\begin{itemize}
+    \item Client needs to know server epochs to know if there is server failure
+        leading to loss of state information in the server.
+    \item Use \texttt{exportid} to detect failed server: when server restarts a
+        new \texttt{exportid} is generated and exported.
+    \item Client receives \texttt{exportid} during binding and will include it
+        in all messages to the server.
+    \item Dispatcher aborts calls with incorrect \texttt{exportid}.
+\end{itemize} 
+
+\subsubsection{Client Failure}
+
+\begin{itemize}
+    \item \textbf{Orphan executions}: result from a client crashing while the
+        server is executing the procedure.
+    \item Server's response will then not be acknowledged. Server either
+        implements a form of rollback or does nothing.
+    \item For long running procedures, to avoid wasting resources, the server
+        may wish to be informed of client crashes so that it can abort orphan
+        executions.
+\end{itemize} 
+
+
+\subsection{Implementation}
+
+\begin{itemize}
+    \item \textbf{TID}: a \emph{transaction identifier} for each invocation. This
+        includes the export identifier.
+    \item \textbf{sn}: a message \emph{sequence number} to detect duplicate
+        messages and messages which follow in the sequence of invocations.
+    \item \textbf{flag}:
+        \begin{itemize}
+            \item \texttt{ack}: please acknowledge message
+            \item \texttt{no ack}: no acknowledgement expected
+        \end{itemize} 
+    \item \textbf{params}: in or out parameters as needed.
+    \item Please see Figure~\ref{fig:rpc} for an example of RPC implementation.
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.33]{rpc_impl.png}
+  	\centering
+  	\caption{An example of RPC implementation}\label{fig:rpc}
+\end{figure}
+
+\subsection{Concurrency}
+
+\begin{itemize}
+    \item client: no deadlocks with \emph{callbacks} if client multi-threaded.
+    \item server:
+        \begin{itemize}
+            \item \underline{thread-per-request}: dispatcher creates new thread to handle
+                each request
+            \item \underline{thread pool}: fixed number of threads generated at start-up,
+                free threads are allocated to requests by the dispatcher. lower
+                creation overhead.
+            \item \underline{thread-per-session}: a thread is created at connection set up
+                to process all requests from the particular client.
+        \end{itemize} 
+\end{itemize} 
+
+
+\section{Distributed Object Systems}
+
 
 
 \end{document}
