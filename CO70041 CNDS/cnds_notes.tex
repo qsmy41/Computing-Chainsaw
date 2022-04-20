@@ -264,7 +264,7 @@ possible.
 \subsection{Composed structures}
 
 \begin{figure}[h]
-  	\includegraphics[scale=0.35]{composed_struct.png}
+  	\includegraphics[scale=0.30]{composed_struct.png}
   	\centering
 \end{figure}
 
@@ -272,7 +272,7 @@ possible.
 \quad
 
 \begin{figure}[h]
-  	\includegraphics[scale=0.21]{obj_ref.png}
+  	\includegraphics[scale=0.26]{obj_ref.png}
   	\centering
     \caption{Reference within the object}
 \end{figure}
@@ -415,6 +415,16 @@ possible.
 It maps incoming calls onto relevant procedure (stub).
 Dispatcher at server receives all ``call'' messages and uses procedure
 number (name) to identify called procedure.
+Upon receiving requests from client, the server
+\begin{enumerate}
+    \item unmarshalls method object
+    \item uses method info to unmarshall arguments
+    \item converts remote object reference to local object reference
+    \item calls method object's invoke method supplying local object reference
+        and arguments
+    \item when method executed, marshalls result or exceptions into reply
+        message and sends it back to client
+\end{enumerate} 
 
 \subsection{Interface Compiler}
 \begin{itemize}
@@ -632,7 +642,378 @@ executions leave the same effect on server state as a single execution.
 \end{itemize} 
 
 
-\section{Distributed Object Systems}
+\section{Distributed Object Systems (Java RMI)}
+
+\subsection{Remote Interface}
+
+\begin{figure}[!bh]
+  	\includegraphics[scale=0.32]{RMI_interface.png}
+  	\centering
+    \caption{An example of remote interface}
+\end{figure}
+
+\subsection{Client Server Interaction}
+
+\begin{itemize}
+    \item relies on the ability to dynamically load code i.e.\ stub.
+    \item skeleton not needed in later versions of java.
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{RMI_interaction.png}
+  	\centering
+    \caption{An example of client-server interaction}
+\end{figure}
+
+\subsection{Remote Object Implementation}
+
+An object is implicitly \emph{exported} if its class derives from the class
+\texttt{java.rmi.server.UnicastRemoteObject}.
+
+\begin{figure}[!h]
+  	\includegraphics[scale=0.30]{remote_obj.png}
+  	\centering
+    \caption{An example of remote object implementation}
+\end{figure}
+
+\subsection{Server and Client Implementation}
+
+\begin{itemize}
+    \item A server creates remote objects as part of mainline code.
+    \item A server may advertise references to objects it hosts via
+        RMI registry.
+    \item Registry allows a binding between a URL for an object and an object
+        reference to be queried by potential clients.
+        \begin{itemize}
+            \item An object's name is a URL formatted as ``//host:port/name''.
+            \item Both host and port are optional.
+        \end{itemize} 
+    \item The server listens for incoming invocation requests which are
+        dispatched to appropriate object.
+    \item RMI security manager is needed in server and client if stub is loaded
+        from server.
+        \begin{itemize}
+            \item check if various operations performed by a stub are allowed 
+            \item e.g. access to communications, files, control virtual machine,
+                etc.
+        \end{itemize} 
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{server.png}
+  	\centering
+    \caption{An example of server implementation}
+\end{figure}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{calc_client.png}
+  	\centering
+    \caption{An example of calculator client implementation}
+\end{figure}
+
+\subsection{Garbage Collection of Remote Objects}
+
+RMI runtime system automatically deletes objects no longer referenced by a
+client.
+\begin{itemize}
+    \item When live reference enters Java VM, its reference count is incremented
+    \item First reference sends ``referenced'' message to server
+    \item After last reference discarded in client, ``unreferenced'' message
+        sent to server.
+    \item Remote object removed when no more local or remote references exist.
+\end{itemize} 
+
+
+\section{Time Service}
+
+\subsection{Cristian's Algorithm}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{cristian.png}
+  	\centering
+\end{figure}
+
+\begin{itemize}
+    \item Assume reference time server with UTC time.
+    \item estimated message propoagation time 
+        \[
+            p=\frac{T_1-T_0-h}{2}
+        \]
+    \item set clock to UTC + $p$, where UTC is the time received from the
+        server
+    \item Measure $T_1-T_0$ over several transactions, \emph{remove outliers}
+        and/or \emph{take minimum values} as being most accurate as smaller
+        network delays.
+    \item[-] Single server would be bottleneck, a single point of failure or a
+        single point of compromise.
+\end{itemize} 
+
+\subsection{Berkley Algorithm}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{berkley.png}
+  	\centering
+\end{figure}
+
+\begin{enumerate}
+    \item Query: \textbf{Coordinator}, chosen as master, periodically polls slaves to
+        query clocks.
+    \item Response: estimates local times with compensation for propagation
+        delay and calculates average time but ignores outliers e.g. large
+        propagation delay
+    \item Adjust: sends message to each slave indicating clock adjustment.
+\end{enumerate} 
+
+\subsection{Network Time Protocol (NTP)}
+
+\begin{itemize}
+    \item Synchronize large number of computers
+    \item Organize servers in \textbf{strata}.
+        \begin{figure}[h]
+            \includegraphics[scale=0.30]{strata.png}
+            \centering
+        \end{figure}
+    \item Multiple servers across the Internet connected to UTC receivers
+        (\textbf{primaries}). 
+    \item \emph{Secondary} servers synchronize with primaries.
+    \item \emph{Tertiary} servers synchronize with secondary servers etc.
+    \item synchronization modes
+        \begin{itemize}
+            \item broadcast/multicast: one or more servers periodically
+                multicast to other computers on \emph{high speed LAN}. Assume
+                small delay.
+            \item procedure-call/client-server: a client requests time from a
+                few other servers, similar to \underline{Critstian's algorithm}.
+            \item symmetric: used by master servers on LANs and layers closest
+                to primaries, higher accuracy based on pairwise synchronization.
+                \begin{figure}[h]
+                  	\includegraphics[scale=0.30]{symmetric.png}
+                  	\centering
+                  	\caption{an example of NTP symmetric protocol}\label{fig:sym}
+                \end{figure}
+                \begin{itemize}
+                    \item Using the example in Figure~\ref{fig:sym}, with $t$
+                        and $t'$ being the transmission delay, and $o$ being the
+                        clock offset of $B$ relative to $A$,
+                        let $a=T_2-T_1=t+o$, $b=T_4-T_3=t'-o$, we have
+                        \[
+                            \text{RTT} = t + t' = a + b = (T_2-T_1)+(T_4-T_3)
+                        \]
+                        and 
+                        \[
+                            2o=a-b=(T_2-T_1)-(T_4-T_3)
+                        \]
+                        assuming $t=t'$.
+                \end{itemize} 
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Vector Clocks}
+
+\begin{itemize}
+    \item Logical clocks are sufficient for causal ordering.
+    \item $V_i[j]$ indicates the logical clock of process $j$ known by
+        process $i$.
+    \item just before timestamping an event, $++V_i[i]$.
+    \item when it receives a timestamp $t$ in a message, set
+        \[
+            V_i[j]=\text{max}(V_i[j],t[j]), 
+            \quad\forall
+            j\in\left\{1,2,\ldots,N\right\}.
+        \]
+        \begin{figure}[h]
+          	\includegraphics[scale=0.35]{vector_clock.png}
+          	\centering
+        \end{figure}
+        
+    \item we then have
+        \begin{itemize}
+            \item if $a$ is the event of a message $m$ being sent from process
+                $A$ and $b$ is the event of $m$ being received by process $B$
+                then $a\rightarrow b$.
+            \item $a\rightarrow b \iff V(a)\le V(b)$.
+            \item if neither $V(a)\le V(b)$ nor $V(a)\ge V(b)$, $a$ and $b$ are
+                concurrent.
+        \end{itemize} 
+    \item We can define a \textbf{consistent cut} accross the history of events, 
+        where the causes are present for all the effects.
+\end{itemize} 
+
+
+\section{Coordination}
+
+\begin{itemize}
+    \item \textbf{Synchronous system} means that maximum bounds can be put on:
+        transmission delay, clock drift rate, time taken to execute an action.
+        This means that we can detect when something has not happened.
+    \item \textbf{Asynchronous system} means that no timing assumptions can be
+        made. A message can take indefinite time to arrive and thus cannot
+        distinguish between a failure and a long-term process.
+\end{itemize} 
+
+\subsection{Unreliable v.s. Reliable Failure Detectors}
+
+\begin{itemize}
+    \item \underline{Unreliable failure detector} is not necessarily accurate,
+        and tells whether a process is \emph{suspected}/\emph{unsuspected} 
+        to have failed.
+    \item \underline{Reliable failure detector} \emph{determines} 
+        whether a process has (not) failed.
+        If failed, not process recovery is considered.
+    \item e.g. say process $P_1$ sends ``$P_1$ alive'' message to all other
+        process every $T$ seconds
+        \begin{itemize}
+            \item Failure detector at each process estimates \emph{maximum}
+                message transmission time $D$.
+            \item choice of $T$ should reflect network delay condition
+            \item Expects a message every $T+D$ seconds --- if received, ok; if
+                not, suspects $P_1$ failed.
+            \item For \underline{asynchronous} system, this is
+                \underline{unreliable}; for \underline{synchronous} system, this
+                is \underline{reliable}.
+        \end{itemize} 
+\end{itemize} 
+
+\subsection{Mutual Exclusion}
+
+\subsubsection{Properties and Performance}
+
+\subsubsubsection{Properties}
+
+\begin{itemize}
+    \item \textbf{Safety}: at most one process enters the critical section
+    \item \textbf{Liveness}: requests eventually succeed, no process is blocked
+        forever
+    \item \textbf{Fairness}: requests are satisfied in some order in
+        which they are sent
+\end{itemize} 
+
+\noindent\subsubsubsection{Performance}
+
+\begin{itemize}
+    \item minimize the bandwidth, e.g. number of messages required
+    \item minimize synchronization delay, i.e.\ between one acccess and the
+        following one.
+\end{itemize} 
+
+\subsubsection{Central Server Algorithm}
+
+\begin{enumerate}
+    \item Processes request access from central server
+    \item Server replies with access token, when access is granted. Other
+        requests are queued.
+    \item Processes release token on finishing access.
+\end{enumerate} 
+
+\subsubsubsection{Properties}
+
+\begin{itemize}
+    \item Safety is satisfied.
+    \item Liveness is satisfied if each request is bounded.
+    \item Fairness is not satisfied.
+\end{itemize} 
+
+\subsubsubsection{Performance}
+
+\begin{itemize}
+    \item 3 messages required for each request.
+    \item 1 RTT required for synchronization delay. Release + Token message need
+        to be sent.
+\end{itemize} 
+
+\subsubsubsection{Comments}
+
+\begin{itemize}
+    \item simple
+    \item central point of failure/central bottleneck
+    \item must have a desginated (or elected) server
+\end{itemize} 
+
+\subsubsection{Ring-based Algorithm}
+
+\begin{itemize}
+    \item remove central server
+    \item processes pass token to each other in a ring, i.e.\ when finished
+        $p_i$ sends token to $p_{i+1(\text{mod}\;n)}$.
+    \item When a token is received by a process
+        \begin{itemize}
+            \item it uses the token if it requires it
+            \item it passes the token if it doesn't
+        \end{itemize} 
+\end{itemize} 
+
+\subsubsubsection{Properties}
+
+\begin{itemize}
+    \item Safety is satisfied.
+    \item Liveness is satisfied if each request is bounded.
+    \item Fairness: not in order of requests.
+\end{itemize} 
+
+\subsubsubsection{Performance}
+
+\begin{itemize}
+    \item Delay to access between 0 and $N$ messages.
+    \item Synchronization delay between 1 and $N$ messages.
+    \item Uses messages even if no one wants to use the resource.
+\end{itemize} 
+
+\subsubsubsection{Comments}
+
+\begin{itemize}
+    \item Variant is to embed the request time in the token and pass on tokens
+        with earlier request times.
+    \item Any failure breaks the ring. Needs procedures to cope with token loss
+        and process failure in the general case.
+\end{itemize} 
+
+\subsubsection{Ricart \& Agrawala}
+
+Please see Figure~\ref{fig:ricart} for the detail.
+
+\begin{figure}
+  	\includegraphics[scale=0.30]{ricart.png}
+  	\centering
+    \caption{Ricart \& Agrawala's algorithm}\label{fig:ricart}
+\end{figure}
+
+\subsubsubsection{Properties}
+
+\begin{itemize}
+    \item Safety: mutual requests are \emph{totally ordered} so only one will
+        receive all replies.
+    \item Liveness: eventually all processes will release
+    \item Fairness: order of Lamport logical timestamps
+\end{itemize} 
+
+\subsubsubsection{Performance}
+
+\begin{itemize}
+    \item gaining entry requires: $N-1$ replies and 1 (if multicast support) or
+        $N-1$ (if no multicast support messages).
+    \item minimum synchronization delay: 1 message
+\end{itemize} 
+
+\subsubsubsection{Comments}
+
+Highly dependent on reliability of processes and messages.
+
+
+\subsection{Elections}
+
+\begin{enumerate}
+    \item Set of processes $p_i$, each has a variable $\texttt{elected}_i$.
+    \item Processes can be \texttt{participant} or \texttt{non-participant}.
+    \item At the beginning of the election all participants set
+        $\texttt{elected}_i=\texttt{null}$.
+    \item At the end of election, all particpant processes must have the same
+        value e.g. $P$ of $\texttt{elected}_i$.
+\end{enumerate} 
+
+
+\subsection{Consensus}
+
+
 
 
 
