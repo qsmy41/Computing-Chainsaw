@@ -1010,11 +1010,221 @@ Highly dependent on reliability of processes and messages.
         value e.g. $P$ of $\texttt{elected}_i$.
 \end{enumerate} 
 
+\subsubsection{Ring Elections}
+
+\subsubsubsection{Steps}
+
+\begin{enumerate}
+    \item Initially all $P_i$ are nonparticipants.
+        \begin{itemize}
+            \item $P_i$ calls for election
+            \item $P_i^\text{status}:=\text{part(participant)}$.
+            \item send \texttt{election($P_i$)} to $P_{i+1\mod{n}}$
+        \end{itemize} 
+    \item When $P_j$ receives \texttt{election(ident)}:
+        \begin{itemize}
+            \item (First Round) if $\texttt{ident}>P_j$: 
+                forward \texttt{election(ident)},
+                set $P_j^\text{status}:=\texttt{part}$.
+            \item (Second Round) if $\texttt{ident}<P_j\wedge
+                P_j^\text{status}=\texttt{nonpart}$:
+                send \texttt{election($P_j$)}, 
+                set $P_j^\text{status}:=\texttt{part}$.
+            \item (Third Round) if $\texttt{ident}=P_j$:
+                send \texttt{elected($P_j$)},
+                $P_j^\text{status}=\texttt{nonpart}$.
+        \end{itemize} 
+    \item When $P_j$ receives \texttt{elected(ident)}:
+        \begin{itemize}
+            \item $\texttt{elected}_j=\texttt{ident}$,
+                $P_j^\text{status}:=\texttt{nonpart}$.
+            \item foward \texttt{elected(ident)}, \emph{unless}
+                $\texttt{ident}=P_j$.
+        \end{itemize} 
+\end{enumerate} 
+
+\subsubsubsection{Analysis}
+
+\begin{itemize}
+    \item Assumptions: No failures, asynchronous, any process can begin an election.
+    \item Safety \& liveness: eventually all processes will receive and agree on
+        the maximum if there are no failures.
+    \item Performance: worst case $3N-1$ messages required for single election.
+\end{itemize} 
+
+\subsubsection{Bully}
+
+\subsubsubsection{Steps}
+
+\begin{enumerate}
+    \item When $P_i$ notices the coordinator is no longer there it initiates an
+        election by sending `ELECTION' to all $P_j$ with $j>i$.
+    \item There are two cases:
+        \begin{itemize}
+            \item If no `ANSWER' received, it declares itself as the
+                `COORDINATOR'.
+            \item If `ANSWER' received, it waits for a `COORDINATOR' message. If
+                non arrives, it starts a new election. If arrives, it sets
+                $\texttt{elected}_i$ to the value received.
+        \end{itemize} 
+    \item When $P_j$ receives `ELECTION' it sends `ANSWER' and starts another
+        election, unless it has already done it.
+\end{enumerate} 
+
+\begin{figure}
+  	\includegraphics[scale=0.30]{bully.png}
+  	\centering
+  	\caption{An example of Bully election}
+\end{figure}
+
+\subsubsubsection{Analysis}
+
+\begin{itemize}
+    \item Safety: No two processes can decide that they are the coordinator,
+        assuming that failed processes cannot be restarted with the same
+        identifier. Otherwise two processes can start again and each decide that
+        they are the coordinator.
+    \item Liveness: If no messages are lost all available processes will reply.
+    \item Performance: $O(N^2)$ in the worst case.
+\end{itemize} 
+
 
 \subsection{Consensus}
 
+\subsubsection{The Byzantine General Problem}
+
+A commanding general must send an order to his $n-1$ lieutenant generals s.t.
+\begin{itemize}
+    \item[IC1] All loyal lieutenants obey the same order.
+    \item[IC2] If the commanding general is loyal, then every loyal lieutenant
+        obeys the order he sends.
+\end{itemize} 
+where ``IC'' stands for Integrity Condition.
+In the world of networks, command general can be mapped to the process sending
+the request, lieutenants can be mapped to the receiving processes.
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{byzantine.png}
+  	\centering
+    \caption{impossibility results}\label{fig:byz}
+\end{figure}
+
+From Figure~\ref{fig:byz}, we can see that in case B, if lieutenant 1 attacks
+he violates IC1. Lieutenant 1 cannot distinguish, from the information available
+to him, between case A \& case B.
+
+\emph{No Solution exists for three generals that works in the presence of a
+single traitor}.
+
+\emph{In general, No solution with fewer than $3m+1$ generals can cope with $m$
+traitors}.
+
+\subsubsection{Unsigned Messages (UM)}
+
+We define UM($n,m$) as the unsigned messages algorithm for $n$ generals and $m$
+traitors, and assume that
+\begin{itemize}
+    \item every message that is sent is delivered correctly
+    \item the receiver of a message knows who sent it
+    \item the absence of a message can be detected
+\end{itemize} 
+
+\medskip\noindent
+\subsubsubsection{UM($n,0$), i.e.\ no traitors}
+
+\begin{itemize}
+    \item Commander sends $v$ to every lieutenant
+    \item Each lieutenant uses the value received or $v_\text{default}$ if no
+        value received.
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{L3.png}
+  	\centering
+\end{figure}
+
+\noindent
+\subsubsubsection{UM($n,m$)}
+
+\begin{itemize}
+    \item For each lieutenant,
+        \begin{itemize}
+            \item let $v_i$ be the value received from commander or
+                $v_\text{default}$ if no value received
+            \item send $v_i$ to $n-2$ other lieutenants using UM($n-1,m-2$)
+        \end{itemize} 
+    \item For each $i$ and each $j\neq i$
+        \begin{itemize}
+            \item let $v_i$ be the value lieutenant received from other
+                lieutenants or $v_\text{default}$ if no value received.
+            \item $\text{Lieutenant}_i$ uses majority($v_1,v_2,\ldots,v_{n-1}$).
+        \end{itemize} 
+\end{itemize} 
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{C.png}
+  	\centering
+\end{figure}
 
 
+\section{Security}
+
+\subsection{Introduction}
+
+\subsubsection{Goals}
+
+\begin{itemize}
+    \item \textbf{Confidentiality}: prevent disclosure of info to unauthorized users +
+        prevent analysis of traffic characteristics
+    \item \textbf{Integrity}: prevent modification of info by unauthorized users ---
+        include no duplication, replays, insertions or reordering
+    \item \textbf{Availability}: prevent denial of service e.g. by disruption
+\end{itemize} 
+
+\subsubsection{Requirements}
+
+\begin{itemize}
+    \item \textbf{Identification}: establishing the identity of the subject
+    \item \textbf{Authentication}: validity of the identity of sender or server,
+        e.g. passwords, biometrics, 2-factor authentication, etc.
+    \item \textbf{Access control}: control over who has access to services or resources
+        within the system.
+\end{itemize} 
+
+\subsection{Cryptography}
+
+\subsubsection{Definition}
+
+\begin{itemize}
+    \item \textbf{Encryption}: a transformation of information based on
+        substitution (table lookup) or transposition (exchanges bytes), i.e.\ a
+        function $E$ with key $k$,
+        \[
+            E_k[M]
+        \]
+        where $M$ is the message.
+    \item \textbf{Decryption}: inverse of encryption to obtain original
+        information, i.e.\ a function $D$ with key $k'$,
+        \[
+            D_{k'}[C]
+        \]
+        where $C$ is the encrypted message.
+\end{itemize} 
+
+\subsubsection{Secret Key (Symmetric) Cryptography}
+
+\begin{itemize}
+    \item basis for \emph{Data Encryption Standard} (DES)
+    \item $E=D$ and $k=k'$
+\end{itemize} 
+
+\subsubsection{Public Key (Asymmetric) Cryptography}
+
+\begin{itemize}
+    \item \textbf{Public key} ($K$) sent out over network and stored with name
+        servers --- used by sender for encryption
+    \item \textbf{Private key} ($K^{-1}$) used by recipient for decryption
+    \item cannot deduce $K^{-1}$ from $K$
+\end{itemize} 
 
 
 \end{document}
