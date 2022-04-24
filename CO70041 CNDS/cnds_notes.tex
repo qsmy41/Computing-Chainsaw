@@ -1224,6 +1224,305 @@ traitors, and assume that
         servers --- used by sender for encryption
     \item \textbf{Private key} ($K^{-1}$) used by recipient for decryption
     \item cannot deduce $K^{-1}$ from $K$
+    \item \textbf{Authentication}: $M=D_{K^{-1}}[E_K[M]]$, a message encrypted
+        with the public key (of the recipient) 
+        can only be decrypted with the recipient's private key.
+        \begin{figure}[h]
+          	\includegraphics[scale=0.30]{authentication.png}
+          	\centering
+            \caption{an illustration of authentication process}
+        \end{figure}
+    \item \textbf{Signature}: $M=D_{K}[E_{K^{-1}}[M]]$, a message encrypted with
+        the private key can be decrypted with the public key of the one who
+        encrypted it, i.e.\ anyone.
+        \begin{figure}
+          	\includegraphics[scale=0.30]{signature.png}
+          	\centering
+          	\caption{an illustration of signature process between $B$ and $A$ only}
+        \end{figure}
+\end{itemize} 
+
+\subsubsection{Message Digest}
+
+\begin{itemize}
+    \item Use a one-way function e.g. hash function $H(M)$, to check message
+        $M$'s integrity.
+    \item sign a message for integrity by signing a hash of it e.g.
+        $E_{K_A^{-1}}[H(M)]$.
+    \item send a signed message with confidentiality, 
+        \[
+            A\rightarrow B: \left\{M,{\{H(M)\}}_{K_A^{-1}}\right\}_{K_B}.
+        \]
+\end{itemize} 
+
+
+\subsection{Symmetric Key Distribution and Authentication}
+
+\subsubsection{Key Distribution Centres (KDC)}
+
+Via a KDC, $A$ can establish a connection with $B$ (key distribution) by
+\begin{enumerate}
+    \item $A\rightarrow\text{KDC}:{\{\texttt{request}(K_S),B\}}_{K_A}$
+    \item $\text{KDC}\rightarrow A:{\{K_S\}}_{K_A},{\{K_S\}}_{K_B}$
+    \item $A\rightarrow B:{\{K_S\}}_{K_B}$
+\end{enumerate} 
+where $K_S$ is the session key.
+Second step is done so to allow KDC to send one message only instead of two,
+thereby having less workload.
+
+\subsubsection{Needham-Schroeder}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{needham.png}
+  	\centering
+\end{figure}
+
+\subsubsection{Kerberos Authentication Service (V4)}
+
+\begin{itemize}
+    \item Separate \underline{authentication} and \underline{ticket granting}
+        service.
+    \item Users and service providers must register with Kerberos.
+    \item KAS stores \underline{identities}, \underline{server private keys}
+        ($K_S$), and encrypted user passwords used to generate private
+        user keys ($K_A$).
+    \item Uses ticket timestamp (TS) and ticket lifetime (TL) to detect replay
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.35]{KAS.png}
+  	\centering
+  	\caption{an overview of KAS}
+\end{figure}
+
+\subsubsubsection{Interactions}
+
+\begin{enumerate}
+    \item $A\rightarrow \text{CAS}$: Options, Aname, Arealm, Sname, TS
+        \begin{itemize}
+            \item KAS generates session key $K_\text{AS}$ \& ticket
+                $T_\text{AS}$ for ticket server $S$.
+            \item KAS uses $A$'s password to generate key $K_A$.
+        \end{itemize} 
+    \item $\text{CAS}\rightarrow A$:
+        $K_A\left\{K_\text{AS},\text{TS}_2,\text{TL},T_\text{AS}\right\}$
+        \begin{itemize}
+            \item Only $A$ can decrypt this to obtain \textbf{\emph{ticket}}
+                \[
+                    T_\text{AS}=K_S\left\{\text{Aname, Arealm, Aaddr,
+                    $K_\text{AS}$, TS, TL}\right\}
+                \]
+                aimed for $S$ to have a secure transfer of authenticated
+                identity of $A$ with optional authorisation data for access
+                control.
+            \item Uses $K_\text{AS}$ to create \textbf{\emph{authenticator}}
+                \[
+                    X_\text{AS}=K_\text{AS}\left\{\text{Aname, Arealm, Appl. data, TS}\right\}
+                \]
+                for $S$ to prove identity of user presenting ticket is the same
+                as that to whom ticket was issued.
+        \end{itemize} 
+    \item $A\rightarrow S$: $B_\text{name}$, $T_\text{AS}$, $X_\text{AS}$
+        \begin{itemize}
+            \item Decrypt $T_\text{AS}$ to get session key $K_\text{AS}$
+                to check authenticator $X_\text{AS}$, i.e.\ know who is
+                requesting access to $B$ and verify that it is indeed $A$ who is
+                requesting.
+            \item Generate session key $K_\text{AB}$ and ticket $T_\text{AB}$
+                for accessing $B$.
+        \end{itemize} 
+    \item $S\rightarrow A$:
+        $K_\text{AS}\left\{K_\text{AB},B_\text{name},\text{TS},T_\text{AB}\right\}$
+        \begin{itemize}
+            \item Decrypt to get \textbf{\emph{ticket}}
+                \[
+                    T_\text{AB}=K_B\left\{\text{Aname, Arealm, Aaddr, $K_\text{AB}$, TS, TL}\right\}
+                \]
+                and session key $K_\text{AB}$.
+            \item Create \textbf{\emph{authenticator}}
+                \[
+                    X_\text{AB}=K_\text{AB}\left\{\text{Aname, Arealm, Appl. data, TS}\right\}
+                \]
+        \end{itemize} 
+    \item $A\rightarrow B$: $T_\text{AB}$, $X_\text{AB}$
+        \begin{itemize}
+            \item decrypt ticket to get session key, check authenticator,
+                generate response by adding 1 to TS in authenticator.
+        \end{itemize} 
+    \item $B\rightarrow A$: $K_\text{AB}\left\{\text{TS} + 1\right\}$
+        \begin{itemize}
+            \item Only server $B$ can generate this response.
+        \end{itemize} 
+\end{enumerate} 
+
+
+\subsection{Certificates and Public Key Infrastructure}
+
+\subsubsection{Certificates}
+
+\begin{itemize}
+    \item A \textbf{certificate} is a signed statement of the association
+        between values.
+    \item An \emph{identity certificate} binds an identity to a cryptographic
+        key, typically the public key of the identity.
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.20]{cert.png}
+  	\centering
+\end{figure}
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{cert-hierarchy.png}
+  	\centering
+    \caption{an example of certificate hierarchy}
+\end{figure}
+
+\subsubsection{Pretty Good Privacy (PGP)}
+
+\begin{itemize}
+    \item Each user has its own \textbf{private key ring} for his own
+        private/public key pairs.
+    \item Public keys of other users are stored in a \textbf{public key ring}.
+        Each entries include
+        \begin{itemize}
+            \item public key
+            \item ID
+            \item $\underbrace{\text{signature}}_{\text{who else has signed the key}}$ +
+                $\underbrace{\text{Signature Trust Values (STV)}}_{\text{level of
+                trust we have in the signer}}$
+            \item key legitimacy value: weighted sum of STVs. higher value
+                indicates greater belief.
+            \item overall owner trust: level of trust we have in this key to
+                sign others. Set by us.
+        \end{itemize} 
+    \item If key appears on private key ring: owner trust.
+    \item For each signature of the public key in public key ring, PGP searches
+        public key ring to find owner of the signature,
+        \begin{itemize}
+            \item owner exists $\rightarrow$ copy \emph{owner trust} to
+                \emph{sig trust}.
+            \item owner doesn't exist $\rightarrow$ unknown user.
+            \item STV values: undefined trsut, unknown trust, partially trusted
+                to sign, always trusted to sign, key is in ``private key ring''
+                (ultimate trust)
+        \end{itemize} 
+    \item Key legitimacy is calculated from STVs
+        \begin{itemize}
+            \item If $\exists$ sig-trust s.t. it is ultimate trust $\rightarrow$
+                complete trust.
+            \item otherwise = 1/X * sum(always trusted) + 1/Y * sum(partially trusted)
+            \item legitimacy values: unknown or undefined trust, key ownership
+                not trusted, marginal trust in key ownership, complete trust in
+                key ownership
+            \item owner trust may change. periodical recalculation.
+        \end{itemize} 
+\end{itemize} 
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.27]{pgp.png}
+  	\centering
+\end{figure}
+
+\subsection{Firewalls}
+
+It is a security gateway between internal and external networks.
+
+\subsubsection{Components}
+\begin{itemize}
+    \item \textbf{Packet Filtering Routers}: a.k.a. \emph{chokes},
+        \emph{screening filters}. Restrict free flow of packets
+        between networks.
+    \item \textbf{Gateways}: applications (proxies) that provide higher-level
+        processing e.g. authenticating users, ``cleaning data'', redirecting
+        data, etc. They usually run on \textbf{Bastion hosts}.
+    \item end-to-end encryption between Firewalls is used to create
+        \textbf{VPN}s.
+\end{itemize} 
+
+\subsubsection{Packet Filtering Rules}
+
+\begin{figure}[h]
+  	\includegraphics[scale=0.24]{filtering_ftp.png}
+  	\centering
+\end{figure}
+\begin{figure}[h]
+  	\includegraphics[scale=0.30]{ftp_rules.png}
+  	\centering
+    \caption{FTP (File Transfer Protocol) rules for FTP filtering}
+\end{figure}
+
+\subsubsection{Bastion Host}
+
+\begin{itemize}
+    \item can runs \emph{circuit-level} gateways
+        \begin{itemize}
+            \item relays connections and maintains connection state
+            \item can drop connections based on destinations, incorrect
+                connection packets, time, volume, etc.
+        \end{itemize} 
+        \begin{figure}[h]
+          	\includegraphics[scale=0.25]{clgw.png}
+          	\centering
+        \end{figure}
+    \item can runs \emph{application-level} gateways
+        \begin{itemize}
+            \item application-specific (app-knowledgeable)
+            \item can block/filter/report based on app-level msg content
+            \item can scan for data leaks, viruses, etc.
+            \item can be configured to limit application features.
+            \item more processing overhead than circuit-level gateway's
+        \end{itemize} 
+        \begin{figure}[h]
+          	\includegraphics[scale=0.25]{algw.png}
+          	\centering
+        \end{figure}
+    \item performs auditing/accounting and administer via dedicated
+        terminal
+    \item should run a trusted, secure, and minimal OS
+        \begin{itemize}
+            \item remove inessential applications, utility services, e.g. sed,
+                ld, etc.
+            \item set file permissions, turn on file quotas, process limits etc.
+            \item no regular user accounts
+            \item no NFS mounts and make filesystems read-only if possible.
+        \end{itemize} 
+\end{itemize} 
+
+\subsubsection{Firewall Architectures}
+
+\begin{itemize}
+    \item screened host architecture
+        \begin{itemize}
+            \item packet filter only pass packets for which the source and
+                destination IP address is the Bastion Host
+            \item if packet filter fails, packets could enter the internal
+                network
+        \end{itemize} 
+        \begin{figure}[h]
+          	\includegraphics[scale=0.25]{screened_host.png}
+          	\centering
+        \end{figure}
+    \item screened host (dual-homed) architecture
+        \begin{itemize}
+            \item a host with 2 network interfaces
+            \item even if packet filter is skipped, still need to get pass bastion host
+        \end{itemize} 
+        \begin{figure}[h]
+          	\includegraphics[scale=0.25]{dual_homed.png}
+          	\centering
+        \end{figure}
+    \item screened subnet architecture
+        \begin{itemize}
+            \item pass packets for which the source of destination IP
+                address is the bastion host
+            \item pass packets for which the ports are for defined proxies on
+                the gateway
+            \item block everything else
+        \end{itemize} 
+        \begin{figure}[h]
+          	\includegraphics[scale=0.25]{subnet.png}
+          	\centering
+        \end{figure}
 \end{itemize} 
 
 
