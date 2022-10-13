@@ -1,0 +1,278 @@
+\documentclass[twocolumn,landscape,10pt]{article}
+\usepackage[thinc]{esdiff} % for typesettign derivatives
+\usepackage{amsthm} % provides an enhanced version of LaTex's \newtheorem command
+\usepackage{mdframed} % framed environments that can split at page boundaries
+\usepackage{enumitem} % bulletin points or other means of listing things
+\usepackage{dsfont} % for symbols
+\usepackage{amssymb} % for AMS symbols
+\usepackage{amsmath} % so as to use align
+\usepackage{latexsym} % so as to use symbols like \leadsto
+\usepackage{mathrsfs} % for using mathscr for char like operators
+\usepackage{commath} % for using norm symbol
+\usepackage{mathtools} % for using environments like dcases
+\usepackage{authblk} % for writing affiliations
+\usepackage{graphicx} % for importing images
+\graphicspath{{./images/}} % for the path to images, also always put label behind captions
+\usepackage{textcomp} % for using degree symbol
+\usepackage{hyperref} % for clickable link in the pdf & customizable reference text
+\usepackage[all]{hypcap} % for clickable link to images instead of caption
+\usepackage[margin=0.9in]{geometry} % default is 1.5in
+% \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
+\usepackage[title]{appendix} % for attaching appendix
+\allowdisplaybreaks % allow page breaking in display maths, like align
+\usepackage{xcolor} % for setting color of a block of text, use \textcolor{<color>}{}
+\usepackage[normalem]{ulem} % for strikethrough text, use \sout{}
+% allow for more advanced table layout
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+% for adjusting caption settings
+\usepackage{caption}
+\captionsetup[table]{skip=10pt}
+
+\theoremstyle{definition}
+\mdfdefinestyle{defEnv}{%
+  hidealllines=false,
+  nobreak=true,
+  innertopmargin=-1ex,
+}
+
+% The following is for writing block of code
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+% setting of the thickness of the 4 lines of box
+\setlength{\fboxrule}{2pt}
+
+% Use the following to change code language and related settings
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  literate={~} {$\sim$}{1}
+}
+
+\pagestyle{headings}
+\author{Lectured by Paul Bilokun}
+\title{Reinforcement Learning}
+\affil{Typed by Aris Zhu Yi Qing}
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Markov Concept Definitions}
+
+\begin{itemize}
+    \item \textbf{\underline{Markov Process}}: a tuple
+        $(\mathcal{S},\mathcal{P})$, where:
+        \begin{itemize}
+            \item $\mathcal{S}$ -- a set of states
+            \item $\mathcal{P}_{ss'} = P[S_{t+1}=s'|S_t=s]$ -- a state
+                transition probability matrix
+            \item $\sum_{s'}\mathcal{P}_{ss'}=1$ (to satisfy the probability axiom)
+        \end{itemize}
+    \item A state $s_t$ is \textbf{\underline{Markov}} $\iff$
+        $P[s_{t+1}|s_t]=P[s_{t+1}|s_1,\ldots,s_t]$
+        \begin{itemize}
+            \item once the state is known, then any data of the history is
+                no longer needed
+        \end{itemize}
+    \item \textbf{\underline{Stationarity (Homogeneous)}}: $P[s_{t+1}|s_t]$
+        doesn't depend on $t$, but only on the origin and destination states.
+    \item \textbf{\underline{Markov Reward Process (MRP)}}: a tuple
+        $(\mathcal{S}, \mathcal{P}, \mathcal{R}, \gamma)$, where:
+        \begin{itemize}
+            \item $\mathcal{S}$ -- a set of states
+            \item $\mathcal{P}_{ss'}$ -- a state transition probability matrix
+            \item $\mathcal{R}_s = \mathbb{E}[r_{t+1}|S_t=s]$ -- an expected
+                immediate reward that we collect upon departing state $s$, whose
+                collection occurs at time step $t+1$
+            \item $\gamma\in[0,1]$ -- a discount factor
+        \end{itemize}
+    \item \textbf{\underline{Return $(R_t)$}}: the total \emph{discounted} 
+        reward from time-step $t$:
+        \[
+            R_t=r_{t+1}+\gamma r_{t+1}+\cdots=\sum_{k=0}^{\infty} \gamma^k r_{t+k+1}
+        \]
+        \begin{itemize}
+            \item $\gamma$ close to 0 leads to \underline{myopic} evaluation
+            \item $\gamma$ close to 1 leads to \underline{far-sighted}
+                evaluation
+            \item if $T$ is the time to reach the terminal state, then
+                \[
+                    R_1=r_2+\gamma r_3+\cdots+\gamma^{T-2}r_T.
+                \]
+        \end{itemize}
+    \item \textbf{\underline{State Value Function $v(s)$}} of an MRP: the
+        expected return $R$ starting from state $s$ at time $t$:
+        \[
+            v(s)=\mathbb{E}[R_t|S_t=s].
+        \]
+    \item \textbf{\underline{Bellman Equation}} for MRPs:
+        \begin{align*}
+            v(s)
+            &= \mathbb{E}[R_t|S_t=s] \\
+            &= \mathbb{E}[r_{t+1}+\gamma(r_{t+2}+\gamma r_{t+3}+\cdots)|S_t=s] \\
+            &= \mathbb{E}[r_{t+1}+\gamma R_{t+1}|S_t=s] \\
+            &= \mathbb{E}[r_{t+1}+\gamma v(S_{t+1})|S_t=s]
+        \end{align*}
+        i.e.\ $v(s)$ decomposes into
+        \begin{itemize}
+            \item immediate reward $r_{t+1}$
+            \item discounted return of successor state $\gamma v(S_{t+1})$.
+        \end{itemize}
+        Alternative forms:
+        \begin{itemize}
+            \item sum notation:
+                $v(s)=\mathcal{R}_s+\gamma\sum_{s'\in\mathcal{S}}\mathcal{P}_{ss'}v(s')$
+            \item \textbf{\underline{vector notation}}:
+                $\mathbf{v}=\mathcal{R}+\gamma\mathcal{P}\mathbf{v}$, where
+                $\mathbf{v}\in\mathbb{R}^{n}$.
+        \end{itemize}
+        Solving the equation in vector notation, we obtain
+        \[
+            \mathbf{v}=(\mathds{1}-\gamma\mathcal{P})^{-1}\mathcal{R}
+        \]
+        while the iterative methods to solve this include:
+        \begin{enumerate}
+            \item dynamic programming
+            \item Monte-Carlo evaluation
+            \item temporal-difference learning
+        \end{enumerate}
+    \item \textbf{\underline{Policy}}: the
+        conditional probability distribution to execute an action
+        $a\in\mathcal{A}$ given that one is in state $s\in\mathcal{S}$ at time
+        $t$:
+        \[
+            \pi_t(a,s)=P[A_t=a|S_t=s]
+        \]
+        This is considered as \textbf{\underline{probabilistic}} or
+        \textbf{\underline{stochastic}}.
+        \begin{itemize}
+            \item Policy is \textbf{\underline{deterministic}} if
+                $\pi(a,s)=1$ and $\pi(a',s)=0$ $\forall a\neq a'$.
+            \item Alternative notation for deterministic policy: $\pi_t(s)=a$.
+        \end{itemize}
+        Optimal policy (action) maximises expected return.
+\end{itemize}
+
+\section{Markov Decision Process}
+
+\subsection{Definition}
+
+\begin{itemize}
+    \item $\mathcal{S}$ -- State space
+    \item $\mathcal{A}$ -- Action space
+    \item $\mathcal{P}_{ss'}^{a}$ -- transition probability $p(s_{t+1}|s_t,a_t)$
+    \item $\gamma\in[0,1]$ -- discount factor
+    \item $\mathcal{R}_{ss'}^{a}=r(s,a,s')$ -- immediate/instantaneous reward
+        function.
+        \begin{itemize}
+            \item temporal notation: $r_{t+1}=r(s_{t+1},s_t,a_t)$
+        \end{itemize}
+    \item $\pi$ -- policy
+        \begin{itemize}
+            \item stochastic: $\mathbf{a}\sim p_\pi(\mathbf{a}|\mathbf{s})
+                \equiv \pi(\mathbf{a}|\mathbf{s}) \equiv \pi(a,s)$
+                \begin{itemize}
+                    \item each entry of the distribution is $\pi(a_1|\mathbf{s})$
+                        or $\pi(a_1|s)$, depending on whether it is a collection
+                        of states of different objects $\mathbf{s}$ or just
+                        state of one object $s$.
+                \end{itemize}
+            \item deterministic: $\mathbf{a}=\pi(\mathbf{s})$
+        \end{itemize}
+\end{itemize}
+
+\subsection{State Value Function (Bellman Equation)}
+
+\begin{align*}
+    V^{\pi}(s)
+    &= \mathbb{E}[R_t|S_t=s] \\
+    &= E\left[\sum_{k=0}^{\infty}\gamma^{k}r_{t+k+1}|S_t=s\right] \\
+    &= E\left[r_{t+1}+\gamma\sum_{k=0}^{\infty}\gamma^{k}r_{t+k+2}|S_t=s\right] \\
+    &=
+    \sum_{a\in\mathcal{A}}\pi(a,s)\left\{\sum_{s'\in\mathcal{S}}\mathcal{P}_{ss'}^a\left(
+    \mathcal{R}_{ss'}^a+\gamma\mathbb{E}_\pi\left[
+\sum_{k=0}^{\infty}\gamma^{k}r_{t+k+2}|S_{t+1}=s'\right]\right)\right\} \\
+    &=
+    \sum_{a\in\mathcal{A}}\pi(a,s)\left\{\sum_{s'\in\mathcal{S}}\mathcal{P}_{ss'}^a\left(
+    \mathcal{R}_{ss'}^a+\gamma V^\pi(s')\right)\right\}
+\end{align*}
+where, for instance,
+\[
+    \mathbb{E}[r_{t+1}|S_t=s]=\sum_{a\in\mathcal{A}}P[a|s]\left(\sum_{s'\in\mathcal{S}}P[s'|s,a]r(s,a,s')\right).
+\]
+
+\subsection{Policy Evaluation (Prediction Problem)}
+
+\begin{itemize}
+    \item \textbf{\underline{Iterative}} policy evaluation:
+        $V_1(s),V_2(s),\ldots,V_k(s)$
+        \begin{itemize}
+            \item Pseudocode:
+                
+                Input $\pi$ the policy to be evaluated\\
+                Initialize $V(s)=0$, $\forall s\in\mathcal{S}^+$\\
+                Repeat\\
+                \hspace*{2ex} $\Delta \leftarrow 0$\\
+                \hspace*{2ex} For each $s\in\mathcal{S}$: \\
+                \hspace*{2ex}\hspace*{2ex} $v\leftarrow V(s)$\\
+                \hspace*{2ex}\hspace*{2ex} $V(s)\leftarrow
+                \sum_a\pi(s,a)\sum_{s'}\mathcal{P}_{ss'}^a[\mathcal{R}_{ss'}^a+\gamma
+                V(s')]$\\
+                \hspace*{2ex}\hspace*{2ex} $\Delta\leftarrow
+                \max{(\Delta,|v-V(s)|)}$\\
+                until $\Delta<\theta$ (a small positive number as a threshold)\\
+                Output $V\approx V^\pi$
+        \end{itemize}
+\end{itemize}
+
+\subsection{State-Action Value Function (Cost-To-Go)}
+
+\begin{itemize}
+    \item Definition:
+        \[
+            Q^\pi(s,a)=\mathbb{E}[R_t|S_t=s,A_t=a]
+            =\mathbb{E}\left[\sum_{k=0}^{\infty}\gamma^k r_{t+k+1}|S_t=s,A_t=a\right]
+        \]
+    \item relation to State Value Function:
+        \[
+            V^\pi(s)=\sum_{a\in\mathcal{A}}\pi(s,a)Q^\pi(s,a)
+        \]
+\end{itemize}
+
+\subsection{Optimal Value Function}
+
+\begin{itemize}
+    \item \textbf{\underline{Optimal State Value Function}}:
+        \[
+            V^*(s)=\underset{\pi}{\max}\;V^\pi(s),\;\forall s\in\mathcal{S}
+        \]
+        The policy $\pi^*$ that maximises the value function is the
+        \textbf{\underline{optimal policy}}.
+    \item \textbf{\underline{Optimal State-Action Value Function}}:
+        \[
+            Q^*(s,a)=\underset{\pi}{\max}\,Q^\pi(s,a),\;\forall
+            s\in\mathcal{S},a\in\mathcal{A}
+        \]
+\end{itemize}
+
+
+\end{document}
