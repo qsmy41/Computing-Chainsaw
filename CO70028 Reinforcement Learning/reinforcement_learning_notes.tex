@@ -219,6 +219,14 @@ where, for instance,
 \[
     \mathbb{E}[r_{t+1}|S_t=s]=\sum_{a\in\mathcal{A}}P[a|s]\left(\sum_{s'\in\mathcal{S}}P[s'|s,a]r(s,a,s')\right).
 \]
+On the other hand, the \textbf{\underline{Bellman Optimality Equation}} for $V$
+is
+\[
+    V^*(s)=\underset{a}{\max}\sum_{s'}\mathcal{P}_{ss'}^a(\mathcal{R}_{ss'}^a+\gamma
+    V^*(s'))
+\]
+saying that the value of a state under an optimal policy $\pi^*$ must equal the
+expected return for the best action from that state.
 
 \subsection{Policy Evaluation (Prediction Problem)}
 
@@ -226,7 +234,7 @@ where, for instance,
     \item \textbf{\underline{Iterative}} policy evaluation:
         $V_1(s),V_2(s),\ldots,V_k(s)$
         \begin{itemize}
-            \item Pseudocode:
+            \item Pseudocode: \label{code:1}
                 
                 Input $\pi$ the policy to be evaluated\\
                 Initialize $V(s)=0$, $\forall s\in\mathcal{S}^+$\\
@@ -256,6 +264,11 @@ where, for instance,
         \[
             V^\pi(s)=\sum_{a\in\mathcal{A}}\pi(s,a)Q^\pi(s,a)
         \]
+    \item \textbf{\underline{Bellman Optimality Equation}} for $Q^\pi$:
+        \[
+            Q^*(s,a)=\sum_{s'}\mathcal{P}_{ss'}^a\left[\mathcal{R}_{ss'}^a+\gamma\,
+            \underset{a'}{\max}\;Q^*(s',a')\right]
+        \]
 \end{itemize}
 
 \subsection{Optimal Value Function}
@@ -272,6 +285,171 @@ where, for instance,
             Q^*(s,a)=\underset{\pi}{\max}\,Q^\pi(s,a),\;\forall
             s\in\mathcal{S},a\in\mathcal{A}
         \]
+        which then we also have
+        \[
+            Q^*(s,a)=\mathbb{E}[r_{t+1}+\gamma V^*(s_{t+1})|S_t=s,A_t=a].
+        \]
+\end{itemize}
+
+\subsection{Bellman Optimality Equation Convergence Theorem}
+
+For an MDP with a finite state and action space
+\begin{enumerate}
+    \item The Bellman (Optimality) equations have a unique solution
+    \item The values produced by value iteration converge to the solution of the
+        Bellman Equation
+\end{enumerate}
+
+\section{Dynamic Programming}
+
+\subsection{Policy Improvement}
+
+\begin{itemize}
+    \item Let $\pi$ and $\pi'$ be any two deterministic policies s.t.
+        $\forall s\in\mathcal{S},$ $Q^\pi(s,\pi'(s))\ge V^\pi(s)$,
+    \item then $\pi'$ must be as good or better than $\pi$, i.e.\ 
+        $\forall s\in\mathcal{S}$, $V^{\pi'}(s)\ge V^\pi(s)$.
+\end{itemize}
+
+\subsection{Policy Iteration}
+
+\begin{itemize}
+    \item Once a policy $\pi$ has been improved to be 
+        $\pi'$ s.t. $V^\pi \le V^{\pi'}$, and continues,
+        this forms a sequence of monotonically improving policies and value functions.
+    \item This eventually finds the optimal policy $\pi^*$,
+        and the process is called \underline{policy iteration}.
+    \item Pseudocode:
+        
+        \underline{Policy evaluation}: same as above \ref{code:1}.
+
+        \underline{Policy Improvement}:\\
+        policy-stable $\leftarrow$ true\\
+        For each $s\in\mathcal{S}$:\\
+        \hspace*{2ex}$b\leftarrow\pi(s)$\\
+        \hspace*{2ex}$\pi(s)\leftarrow
+        \underset{a}{\text{argmax}}\sum_{s'}\mathcal{P}_{ss'}^a\left[\mathcal{R}_{ss'}^a+\gamma
+        V(s')\right]$\\
+        \hspace*{2ex}If $b\neq\pi(s)$, then policy-stable $\leftarrow$ false\\
+        If policy-stable, then stop; else go to evaluation.
+
+    \item 
+        What the \underline{Policy Improvement} step is doing is that it takes the optimal
+        action $a'$ from the current state to the next state $s'$, which forms
+        the new policy $\pi'$, which in the next iteration find the optimal
+        action $a''$ forming the new policy $\pi''$, etc.
+\end{itemize}
+
+\subsection{Bellman's Priciple of Optimality}
+
+A policy $\pi(a|s)$ achieves the optimal value from state $s$,
+$V^\pi(s')=V^*(s')$, iff
+\begin{itemize}
+    \item for any state $s'$ reachable from $s$,
+    \item $\pi$ achieves the optimal value from state $s'$, $V^\pi(s')=V^*(s')$.
+\end{itemize} 
+
+\subsection{Value Iteration}
+
+\begin{itemize}
+    \item Pseudocode:
+
+        Initialize $V$ arbitrarily $\forall s\in\mathcal{S}^+$.
+
+        Repeat\\
+        \hspace*{2ex}$\Delta\leftarrow 0$\\
+        \hspace*{2ex}For each $s\in\mathcal{S}$:\\
+        \hspace*{4ex}$v\leftarrow V(s)$\\
+        \hspace*{4ex}$V(s)\leftarrow\pmb{\max}_a\sum_{s'}\mathcal{P}_{ss'}^a\left[\mathcal{R}_{ss'}^a+\gamma
+        V(s')\right]$\\
+        \hspace*{4ex}$\Delta\leftarrow\max{(\Delta,|v-V(s)|)}$\\
+        until $\Delta<\theta$ (a small positive number)
+
+        Then perform \underline{Policy Extraction} s.t.
+        \[
+            \pi(s)=\underset{a}{\text{argmax}}\sum_{s'}\mathcal{P}_{ss'}^a\left[\mathcal{R}_{ss'}^a+\gamma
+            V(s')\right].
+        \]
+    \item Policy iteration v.s. Value iteration:
+        \begin{itemize}
+            \item \textbf{Policy iteration} includes: policy evaluation + policy
+                improvement
+            \item \textbf{Value iteration} includes: finding optimal value
+                function + one policy extraction.
+            \item Finding optimal value function can be seen as a combination of
+                policy improvement and policy evaluation
+            \item Policy iteration and finding optimal value function are highly
+                similar except for a max operation.
+            \item It is more likely that policy iteration is faster than value
+                iteration due to faster convergence.
+        \end{itemize}
+    \item This is similar to what we normally understand about dp coding
+        problems, where at each iteration we look for optimal computed value
+        (although most likely we will figure out the optimal policy first).
+\end{itemize}
+
+\subsection{Sync/Async backups}
+
+\begin{itemize}
+    \item \textbf{\underline{Synchronous backups}}: 
+        \begin{itemize}
+            \item all states are backed up in parallel,
+            \item thereby requiring two copies of the value function
+        \end{itemize}
+    \item \textbf{\underline{Asynchronous backups}}:
+        \begin{itemize}
+            \item not going through all states,
+            \item or not in any ordering,
+            \item with any available state/state-action values
+            \item one copy of value function, in-place update
+            \item e.g. value iteration with only one state updated per iteration
+        \end{itemize}
+\end{itemize}
+
+\section{Model-Free Learning}
+
+\subsection{Monte Carlo (MC) Learning}
+
+\subsubsection{Introduction}
+
+\begin{itemize}
+    \item MC methods learn directly form episodes of experience
+    \item MC is \textbf{\underline{model-free}}: no knowledge of MDP 
+        transitions/rewards needed
+    \item MC learns from complete episodes: no bootstrapping, i.e.\ not updating
+        value estimates based on other value estimates
+    \item main idea: value of staste = mean return
+        \begin{itemize}
+            \item an obvious way thus is to estimate from experience -- average
+                the returns observed after visits to that state
+            \item as more returns are observed, the average should converge to
+                the expected value
+        \end{itemize}
+    \item can only be applied to \textbf{\underline{episodic}} MDPs that have
+        terminal states
+\end{itemize}
+
+\subsubsection{MC Policy Evaluation}
+
+\begin{itemize}
+    \item Goal: learn $V^\pi$ from traces $\tau$ of episodes of length $T$ that
+        we experience under policy $\pi$, where
+        \[
+            \tau\equiv s_1,a_1,r_1, s_2,\ldots,s_k.
+        \]
+    \item Pseudocode:
+
+        $\hat{V}(s)\leftarrow$ arbitrary value, $\forall s\in\mathcal{S}$\\
+        Returns($s$) $\leftarrow$ an empty list, $\forall s\in\mathcal{S}$
+
+        \textbf{repeat}\\
+        \hspace*{2ex}Get trace $\tau$ using $\pi$\\
+        \hspace*{2ex}\textbf{for all} $s$ appearing in $\tau$ \textbf{do}\\
+        \hspace*{4ex}$R\leftarrow$ return from first appearance of $s$ in
+        $\tau$.\\
+        \hspace*{4ex}Append $R$ to Returns($s$)\\
+        \hspace*{4ex}$\hat{V}(s)\leftarrow$ average(Returns($s$))\\
+        \textbf{until} forever
 \end{itemize}
 
 
