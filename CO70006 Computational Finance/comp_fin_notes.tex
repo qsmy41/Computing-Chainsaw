@@ -1,0 +1,466 @@
+\documentclass[twocolumn,landscape,10pt]{article}
+\usepackage[thinc]{esdiff} % for typesettign derivatives
+\usepackage{amsthm} % provides an enhanced version of LaTex's \newtheorem command
+\usepackage{mdframed} % framed environments that can split at page boundaries
+\usepackage{enumitem} % bulletin points or other means of listing things
+\usepackage{amssymb} % for AMS symbols
+\usepackage{amsmath} % so as to use align
+\usepackage{latexsym} % so as to use symbols like \leadsto
+\usepackage{mathrsfs} % for using mathscr for char like operators
+\usepackage{commath} % for using norm symbol
+\usepackage{mathtools} % for using environments like dcases
+\usepackage{authblk} % for writing affiliations
+\usepackage{graphicx} % for importing images
+\graphicspath{{./images/}} % for the path to images, also always put label behind captions
+\usepackage{textcomp} % for using degree symbol
+\usepackage{hyperref} % for clickable link in the pdf & customizable reference text
+\usepackage[all]{hypcap} % for clickable link to images instead of caption
+\usepackage[margin=0.9in]{geometry} % default is 1.5in
+% \usepackage[left=0.4in, right=0.4in, top=0.8in, bottom=0.8in]{geometry}
+\usepackage[title]{appendix} % for attaching appendix
+\allowdisplaybreaks % allow page breaking in display maths, like align
+\usepackage{xcolor} % for setting color of a block of text, use \textcolor{<color>}{}
+\usepackage[normalem]{ulem} % for strikethrough text, use \sout{}
+% allow for more advanced table layout
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+% for adjusting caption settings
+\usepackage{caption}
+\captionsetup[table]{skip=10pt}
+
+\theoremstyle{definition}
+\mdfdefinestyle{defEnv}{%
+  hidealllines=false,
+  nobreak=true,
+  innertopmargin=-1ex,
+}
+
+% The following is for writing block of code
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+% setting of the thickness of the 4 lines of box
+\setlength{\fboxrule}{2pt}
+
+% Use the following to change code language and related settings
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  literate={~} {$\sim$}{1}
+}
+
+\pagestyle{headings}
+\author{Lectured by Panos Parpas}
+\title{Computational Finance}
+\affil{Typed by Aris Zhu Yi Qing}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+\begin{itemize}
+    \item \textbf{\underline{Forward contract}}: a customized \emph{binding} 
+        contract to buy/sell an asset at a specific price 
+        (\textbf{\underline{forward price}}) on a \emph{future} date.
+    \item \textbf{\underline{American option}}: gives the holder the
+        \emph{right} to exercise the option at any time before the
+        date of expiration.
+    \item \textbf{\underline{European option}}: can only be exercised
+        at the date of expiration.
+    \item \textbf{\underline{call/put option}}: gives the holder the
+        \emph{right} to buy/sell.
+        \textbf{\underline{}}
+    \item \textbf{\underline{Derivative asset}}: assets defined in terms of
+        underlying financial asset.
+\end{itemize} 
+
+\section{The Binomial Model}
+
+\subsection{The One Period Model}
+
+\subsubsection{Definitions}
+
+\begin{itemize}
+    \item 
+        \textbf{\underline{Bond}} price process is deterministic and given by
+        \begin{align*}
+            B_0 & = 1, \\
+            B_1 & = 1 + R.
+        \end{align*}
+        where constant $R$ is the spot rate for the period.
+    \item
+        \textbf{\underline{Stock}} price process is stochastic and given by
+        \begin{align*}
+            S_0 & = s, \\
+            S_1 & = s\cdot Z
+        \end{align*}
+        where $Z$ is a stochastic variable defined as
+        \[
+            Z =
+            \begin{cases}
+                u, & \text{with probability $p_u$}, \\
+                d, & \text{with probability $p_d$}.
+            \end{cases}
+        \]
+        with $p_u+p_d=1$ and the assumption that $d<u$.
+    \item
+        \textbf{\underline{Portfolio}} on the $(B, S)$ market is a vector
+        \[
+            h = (x, y).
+        \]
+        with a deterministic market value at $t=0$ and stochastic value at
+        $t=1$.
+    \item \textbf{\underline{Value Process}} of the portfolio $h$ is defined as
+        \[
+            V_t^h = xB_t+yS_t,\quad t=0,1,
+        \]
+        or, in more detail,
+        \begin{align*}
+            V_0^h & = x+ys, \\
+            V_1^h & = x(1+R)+ysZ.
+        \end{align*}
+    \item \textbf{\underline{Arbitrage}} portfolio is an $h$ with the properties
+        \begin{align*}
+            V_0^h & = 0, \\
+            V_1^h & > 0, \quad\text{\emph{with probability 1}}
+        \end{align*}
+\end{itemize}
+
+\subsubsection{Contingent Claim Pricing}
+
+\newmdtheoremenv[style=defEnv]{theorem}{Proposition}
+\begin{theorem}
+    The model $h$ is free of arbitrage $\iff$
+    $d\le(1+R)\le u$.
+\end{theorem}
+
+\paragraph{Comments} The above proposition implies that $(1+R)$ is a convex
+combination of $u$ and $d$, i.e.\
+\[
+    1+R=q_u\cdot u + q_d\cdot d,
+\]
+where $q_u$ and $q_d$ can be interpreted as probabilities for a new probability
+measure $Q$ with $P(Z=u)=q_u$ and $P(Z=d)=q_d$. Denoting expectation w.r.t. this
+measure by $E^Q$ and with the following calculation
+\[
+    \frac{1}{1+R}E^Q[S_1]=\frac{1}{1+R}[q_usu+q_dsd]=\frac{1}{1+R}\cdot
+    s(1+R)=s,
+\]
+we arrive at the following relation
+\[
+    s=\frac{1}{1+R}E^Q[S_1].
+\]
+
+\newmdtheoremenv[style=defEnv]{martingale measure}[theorem]{Definition}
+\begin{martingale measure}
+    A probability measure $Q$ is \textbf{\underline{martingale}} 
+    if the following condition holds:
+    \[
+        S_0=\frac{1}{1+R}E^Q[S_1].
+    \]
+\end{martingale measure}
+
+\newmdtheoremenv[style=defEnv]{arbitrage free 1}[theorem]{Proposition}
+\begin{arbitrage free 1}
+    Arbitrage-free model $\iff$ $\exists$ martingale measure $Q$.
+\end{arbitrage free 1}
+
+\newmdtheoremenv[style=defEnv]{binomial model martingale}[theorem]{Proposition}
+\begin{binomial model martingale}
+    For the binomial model above, the martingale probabilities are
+    \[
+        \begin{cases}
+            q_u=\dfrac{(1+R)-d}{u-d}, \\[2ex]
+            q_d=\dfrac{u-(1+R)}{u-d}.
+        \end{cases}
+    \]
+\end{binomial model martingale}
+
+\begin{proof}
+Solve the system of equation
+\[
+    \begin{cases}
+        1+R=q_u\cdot u+q_d\cdot d\\
+        q_u+q_d=1.
+    \end{cases}
+\]
+\end{proof}
+
+\newmdtheoremenv[style=defEnv]{contingent claim}[theorem]{Definition}
+\begin{contingent claim}
+    A \textbf{\underline{contingent claim}} (financial derivative) is any
+    stchastic variable $X$ of the form $X=\Phi(Z)$, where $Z$ is the stochastic
+    variable driving the stock price process above, $\Phi$ is the
+    \textbf{\underline{contract function}}.
+\end{contingent claim}
+
+\newtheorem{contingent claim eg}[theorem]{Example}
+\begin{contingent claim eg}
+European call option on the stock with
+strike price $K$. Assuming that $sd<K<su$, we have
+\[
+    X=
+    \begin{cases}
+        su-K, &\text{if $Z=u$},\\
+        0, &\text{if $Z=d$},
+    \end{cases}
+\]
+so the contract function is given by
+\begin{align*}
+    \Phi(u) & = su-K,\\
+    \Phi(d) & = 0.
+\end{align*}
+\end{contingent claim eg}
+
+\newmdtheoremenv[style=defEnv]{replicated and reachable}[theorem]{Definition}
+\begin{replicated and reachable}
+    A given contingent claim $X$ can be \textbf{\underline{replicated}} / is
+    \textbf{\underline{reachable}} if
+    \[
+        \exists h \text{ s.t. } V_1^h=X,\;\text{with probability 1}.
+    \]
+    We call such an $h$ a
+    \textbf{\underline{hedging}}/\textbf{\underline{replicating}} portfolio.
+    If all claims can be replicated, then the market is
+    \textbf{\underline{complete}}.
+\end{replicated and reachable}
+
+\newmdtheoremenv[style=defEnv]{X pricing based on V}[theorem]{Proposition}
+\begin{X pricing based on V}
+    If a claim $X$ is reachable with replicating portfolio $h$, then the only
+    reasonable price process for $X$ is
+    \[
+        \Pi_t[X]=V_t^h, \;t=0,1.
+    \]
+    Here, ``reasonable'' means that $\Pi_0[X]\neq V_0^h\Rightarrow$ arbitrage
+    possibility.
+\end{X pricing based on V}
+
+\newmdtheoremenv[style=defEnv]{no arbitrage leads to complete}[theorem]{Proposition}
+\begin{no arbitrage leads to complete}
+    The general binomial model is free of arbitrage $\Rightarrow$ it is
+    complete.
+\end{no arbitrage leads to complete}
+
+\begin{proof}
+    Say a claim $X$ has contract function $\Phi$ s.t. \[
+        V_1^h=
+        \begin{cases}
+            \Phi(u), & \text{ if $Z=u$}\\
+            \Phi(d), & \text{ if $Z=d$},
+        \end{cases}
+    \]
+    we can obtain the following system of equations by expanding $V_1^h$
+    \begin{align*}
+        (1+R)x+xuy&=\Phi(u),\\
+        (1+R)x+xdy&=\Phi(d),
+    \end{align*}
+    and solve it to find out the replicating portfolio as
+    \begin{align*}
+        x&=\frac{1}{1+R}\cdot \frac{u\Phi(d)-d\Phi(u)}{u-d},\\
+        y&=\frac{1}{s}\cdot \frac{\Phi(u)-\Phi(d)}{u-d}.
+    \end{align*}
+\end{proof}
+
+\newmdtheoremenv[style=defEnv]{claim pricing prop}[theorem]{Proposition}
+\begin{claim pricing prop}
+    If the binomial model is free of arbitrage, then the arbitrage free price of
+    a contingent claim $X$ is
+    \[
+        \Pi_0[X]=\frac{1}{1+R}E^Q[X],
+    \]
+    where the martingale measure $Q$ is uniquely determined by the relation
+    \[
+        S_0=\frac{1}{1+R}E^Q[S_1].
+    \]
+\end{claim pricing prop}
+
+\begin{proof}
+    Using the results derived previously, we can find out that
+    \begin{align*}
+        \Pi_0[X]
+        &= x + sy \\
+        &= \frac{1}{1+R}\left[\frac{(1+R)-d}{u-d}\cdot
+        \Phi(u)+\frac{u-(1+R)}{u-d}\cdot \Phi(d)\right]\\
+        &= \frac{1}{1+R}\left[\Phi(u)q_u+\Phi(d)q_d\right]\\
+        &= \frac{1}{1+R}E^Q[X].
+    \end{align*}
+\end{proof}
+
+\subsection{The Multiperiod Model}
+
+\subsubsection{Definitions}
+
+\begin{itemize}
+    \item Model
+        \begin{itemize}
+            \item The bond price dynamics is given by
+                \[
+                    B_{n+1}=(1+R)B_n,\quad B_0=1.
+                \]
+            \item The stock price dynamics is given by
+                \[
+                    S_{n+1}=S_n\cdot Z_n,\quad S_0=s.
+                \]
+                where $Z_0,Z_1,\ldots,Z_{T-1}$ are assumed to be i.i.d.
+                stochastic variables, with only two variables $u$ and $d$ and
+                probabilities
+                \[
+                    P(Z_n=u)=p_u,\quad P(Z_n=d)=p_d.
+                \]
+            \item Illustrating the stock dynamics by means of a tree, we can see
+                that it is \textbf{\underline{recombining}}.
+        \end{itemize}
+    \item A \textbf{\underline{portfolio strategy}} is a stochastic process
+        \[
+            \left\{h_t=(x_t,y_t);\;t=1,\ldots,T\right\}
+        \]
+        s.t. $h_t$ is a function of $S_0,S_1,\ldots,S_{t-1}$. By convention,
+        $h_0=h_1$.
+        \begin{itemize}
+            \item Interpretation of $h_t$: at $t-1$,
+                $x_t$ and $y_t$ of bonds and stocks are bought and held until time $t$.
+        \end{itemize}
+    \item The \textbf{\underline{value process}} corresponding to the portfolio
+        $h$ is defined by
+        \[
+            V_t^h=x_t(1+R)+y_tS_t.
+        \]
+    \item A portfolio strategy $h_t$ is said to be \textbf{\underline{self-financing}} 
+        if $\forall t=0,\ldots,T-1$,
+        \[
+            x_t(1+R)+y_tS_t = x_{t+1}+y_{t+1}S_t
+        \]
+        which says that the market value of the ``old'' portfolio $h_t$ 
+        equals to the purchase value of the ``new'' portfolio $h_{t+1}$.
+    \item An \textbf{\underline{arbitrage}} possibility is a self-financing
+        portfolio $h$ with the properties
+        \[
+            \begin{align*}
+                V_0^h &= 0, \\
+                P(V_T^h\ge{}0) &= 1, \\
+                P(V_T^h>0) &> 0.
+            \end{align*}
+        \]
+    \item The \textbf{\underline{martingale}} probabilities $q_u$ and $q_d$ are
+        defined as the probabilities for which the following relation holds
+        \[
+            s=\frac{1}{1+R}E^Q[S_{t+1}|S_t=s]
+        \]
+\end{itemize}
+
+\subsubsection{Binomial Model Pricing Algorithm}
+
+\newmdtheoremenv[style=defEnv]{arbitrage cond}[theorem]{Proposition}
+\begin{arbitrage cond}
+    The model is free of arbitrage $\Rightarrow$ $d\le(1+R)\le u$.
+\end{arbitrage cond}
+
+\newmdtheoremenv[style=defEnv]{assumption on u and d}[theorem]{Assumption}
+\begin{assumption on u and d}
+    From now, assume that $d < u$ and $d\le(1+R)\le u$.
+\end{assumption on u and d}
+
+\newmdtheoremenv[style=defEnv]{contingent claim in multi-period model}[theorem]{Definition}
+\begin{contingent claim in multi-period model}
+    A \textbf{\underline{contingent claim}} is a stochastic variable $X$ of the
+    form
+    \[
+        X=\Phi(S_T),
+    \]
+    where the \textbf{\underline{contract function}} $\Phi$ is some given real
+    valued function.
+\end{contingent claim in multi-period model}
+
+
+\newmdtheoremenv[style=defEnv]{replicated and reachable in multi-period model}[theorem]{Definition}
+\begin{replicated and reachable in multi-period model}
+    A given contingent claim $X$ can be \textbf{\underline{replicated}} / is
+    \textbf{\underline{reachable}} if
+    \[
+        \exists \text{ self-financing } h \text{ s.t. } V_T^h=X,\;\text{with probability 1}.
+    \]
+    We call such an $h$ a
+    \textbf{\underline{hedging}}/\textbf{\underline{replicating}} portfolio.
+    If all claims can be replicated, then the market is
+    \textbf{\underline{(dynamically) complete}}.
+\end{replicated and reachable in multi-period model}
+
+\newmdtheoremenv[style=defEnv]{The binomial algorithm}[theorem]{(Binomial
+Algorithm) Proposition}
+\begin{The binomial algorithm}
+    Consider a $T$-claim $X=\Phi(S_T)$, which could be replicated with a
+    self-financing portfolio $h$. Let $k$ be the number of up-moves occurred. So
+    $V_t(k)$ can be computed recursively as
+    \[
+        \begin{cases}
+            V_t(k) &=
+            \dfrac{1}{1+R}\left[q_uV_{t+1}(k+1)+q_dV_{t+1}(k)\right],\\[2ex]
+            V_T(k) &= \Phi(su^kd^{T-k}).
+        \end{cases}
+    \]
+    where the martingale probabilities $q_u$ and $q_d$ are
+    \[
+        \begin{cases}
+            q_u &= \dfrac{(1+R)-d}{u-d}\\[2ex]
+            q_d &= \dfrac{u-(1+R)}{u-d}.
+        \end{cases}
+    \]
+    and the hedging portfolio is given by
+    \[
+        \begin{cases}
+            x_t(k) &= \dfrac{1}{1+R}\cdot \dfrac{uV_t(k)-dV_t(k+1)}{u-d},\\[2ex]
+            y_t(k) &= \dfrac{1}{S_{t-1}}\cdot \dfrac{V_t(k+1)-V_t(k)}{u-d}.
+        \end{cases}
+    \]
+    \textbf{\emph{N.B.}} 
+    In Fig 2.9 in notes, (the figure might be confusing) $(-22.5,5/8)$ is both $h_0$ and $h_1$,
+    $(-42.5,95/120)$ is $h_2(1)$, $(-2.5,1/8)$ is $h_2(0)$, etc.
+\end{The binomial algorithm}
+
+\newmdtheoremenv[style=defEnv]{t claim arbitrage free price}[theorem]{Proposition}
+\begin{t claim arbitrage free price}
+    The arbitrage free price at $t=0$ of a $T$-claim $X$ is given by
+    \[
+        \Pi_0[X]=\frac{1}{{(1+R)}^{T}}\cdot E^Q[X],
+    \]
+    where $Q$ denotes the martingale measure, or more explicitly,
+    \[
+        \Pi_0[X]=\frac{1}{{(1+R)}^{T}}\cdot\sum_{k=0}^{T}
+        \begin{pmatrix}
+            T \\
+            k
+        \end{pmatrix} 
+        q_u^kq_d^{T-k}\Phi(su^kd^{T-k}).
+    \]
+\end{t claim arbitrage free price}
+
+\newmdtheoremenv[style=defEnv]{iff condition for arbitrage free}[theorem]{Proposition}
+\begin{iff condition for arbitrage free}
+    $d<(1+R)<u\iff$ free of arbitrage.
+\end{iff condition for arbitrage free}
+
+
+
+
+\end{document}
