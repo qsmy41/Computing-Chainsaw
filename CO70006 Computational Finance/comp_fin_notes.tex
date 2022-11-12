@@ -461,6 +461,52 @@ Algorithm) Proposition}
 \end{iff condition for arbitrage free}
 
 
+\section{Brownian Motion}
+
+\subsection{Definitions}
+
+\begin{itemize}
+    \item Let $A, B$ be two random variables, we define \textbf{\underline{equal
+        in distribution}} as
+        \[
+            A\stackrel{d}{=}B
+            \iff
+            P(A\in C)=P(B\in C)\;\forall \text{ possible sets $C$}.
+        \]
+    \item
+        We say a random variable $X$ has \textbf{\underline{stationary
+        increments}} if
+        \[
+            X_t-X_s\stackrel{d}{=}X_{t+h}-X_{s+h} \quad\forall h>0.
+        \]
+    \item 
+        A stochastic process $B_t$ is called a 
+        \textbf{\underline{Brownian motion}} if
+        \begin{itemize}
+            \item $B_0 = 0$,
+            \item $B_t-B_s\sim N(0,t-s) \;\forall t\ge s\ge 0$, implying
+                \emph{stationary} increments,
+            \item it has \emph{independent} increments.
+        \end{itemize}
+        with
+        \begin{itemize}
+            \item $\mathbb{E}[B_t] = 0$,
+            \item Cov$(t,s)$ = min$\left\{t,s\right\}$.
+        \end{itemize}
+\end{itemize}
+
+\subsection{Path Properties}
+
+\begin{itemize}
+    \item Paths are continuous (no jumps).
+    \item Nowhere differentiable.
+    \item Paths are \textbf{\underline{self-similar}}, i.e.\
+        \[
+            (T^HB_{t_1},\ldots,T^HB_{t_n})\stackrel{d}{=}(B_{Tt_1},\ldots,B_{Tt_n})
+        \]
+        with $H=0.5$ is the Hurst coefficient.
+\end{itemize}
+
 
 
 \end{document}
