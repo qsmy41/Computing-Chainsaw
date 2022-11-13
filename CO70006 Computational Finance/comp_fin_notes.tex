@@ -491,7 +491,13 @@ Algorithm) Proposition}
         with
         \begin{itemize}
             \item $\mathbb{E}[B_t] = 0$,
-            \item Cov$(t,s)$ = min$\left\{t,s\right\}$.
+            \item Cov$(B_t,B_s)$ = min$\left\{t,s\right\}$. Show this using
+                (Practice!)
+                \begin{itemize}
+                    \item $\text{Cov}(B_t,B_s)=\mathbb{E}[(B_t-\mathbb{E}[B_t])(B_s-\mathbb{E}[B_s])]$
+                    \item
+                        $\text{Cov}(B_t,B_s)=\mathbb{E}[B_tB_s]-\mathbb{E}[B_t]\mathbb{E}[B_s]$.
+                \end{itemize}
         \end{itemize}
 \end{itemize}
 
@@ -506,6 +512,43 @@ Algorithm) Proposition}
         \]
         with $H=0.5$ is the Hurst coefficient.
 \end{itemize}
+
+\subsection{Brownian Motion with Drift}
+
+\begin{itemize}
+    \item A \textbf{\underline{Gaussian Process}} is a stochastic process s.t.
+        every finite collection of those random variables has a multivariate
+        normal distribution.
+    \item The process is
+        \[
+            X_t=\mu t+\sigma B_t,\quad t\ge 0.
+        \]
+    \item It is a Gaussian process with the following properties:
+        \begin{itemize}
+            \item $\mathbb{E}[X_t]=\mu t$,
+            \item Cov$(X_t, X_s)=\sigma^2\min\left\{t,s\right\}$. (Practice!)
+        \end{itemize}
+\end{itemize}
+
+\subsection{Geometric Brownian Motion with Drift}
+
+\begin{itemize}
+    \item The process is
+        \[
+            X_t=e^{\mu t+\sigma B_t},\quad t\ge 0.
+        \]
+    \item It is \emph{not} Gaussian, but log-normal instead, with the following
+        properties:
+        \begin{itemize}
+            \item $\mathbb{E}[X_t]=e^{\mu t+\frac{1}{2}\sigma^2t}$, (Practice!)
+            \item
+                $\text{Cov}(X_t,X_s)=e^{\left(\mu+\frac{1}{2}\sigma^2\right)(t+s)}\left(e^{\sigma^2s}-1\right)$.
+                (Practice!)
+        \end{itemize}
+\end{itemize}
+
+
+\section{Stochastic Integration}
 
 
 
