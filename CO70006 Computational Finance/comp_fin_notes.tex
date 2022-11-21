@@ -550,6 +550,178 @@ Algorithm) Proposition}
 
 \section{Stochastic Integration}
 
+\subsection{Time Value of Money}
+
+\begin{itemize}
+    \item \textsterling $x$ today is worth more than \textsterling $x$ in the
+        future.
+    \item Compensation for postponed consumption
+    \item Inflation: prices may rise so \textsterling $x$ in the future will not
+        have the same purchasing power
+    \item Risk -- money in the future may never be received.
+\end{itemize}
+
+\subsection{Interest}
+
+\subsubsection{Definitions}
+
+\begin{itemize}
+    \item $V(t)$: value of investment at time $t$
+    \item $r$: interest rate $r\ge 0$
+    \item $t$: time measured in years
+    \item $P$: principal/initial investment (\textsterling)
+    \item simple/annual compounding:
+        \[
+            \begin{cases}
+                V(0) &= P \\
+                V(t) &= (1 + tr) P
+            \end{cases}
+        \]
+\end{itemize}
+
+\subsubsection{Compounding}
+
+\begin{itemize}
+    \item Periodic, e.g. monthly compounding:
+        \[
+            V(t) = {\left(1+\frac{r}{12}\right)}^{t}P
+        \]
+    \item Continuous:
+        \begin{align*}
+            V(t) = e^{tr}P
+            &\quad\Longrightarrow\quad
+            \frac{\mathrm{d}V(t)}{\mathrm{d}t}=rV(t) \\
+            &\quad\Longrightarrow\quad
+            V(t)=V(0)+\int_{0}^{t}rV(s)\mathrm{d}s.
+        \end{align*}
+\end{itemize}
+
+\subsubsection{Stochastic Integral}
+
+Example:
+\[
+    I(T) = \int_{0}^{T} B(t)\mathrm{d}B(t)
+\]
+
+Using left-hand point approximation, we can get
+\begin{align*}
+    I(T)
+    &=
+    \underset{L\rightarrow\infty}{\lim}\sum_{i=0}^{L-1}B(t_i)\left[B(t_{i+1})-B(t_i)\right]\\
+    &= \underset{L\rightarrow\infty}{\lim}\sum_{i=0}^{L-1}
+    -\frac{1}{2}B(t_i)^2-\frac{1}{2}{[B(t_{i+1})-B(t_i)]}^{2}
+    +\frac{1}{2}B(t_{i+1})^2 \\
+    &= \frac{1}{2}\underset{L\rightarrow\infty}{\lim}\sum_{i=0}^{L-1}
+    [B(t_{i+1})^2-B(t_i)^2]-\delta B_i^2
+\end{align*}
+where $\delta B_i=B(t_{i+1})-B(t_i)$. Analyzing the above expression
+(exercise!), we can obtain
+\[
+    I(T) = \frac{1}{2}B(T)^2 - \frac{1}{2}T.
+\]
+We can also show the following: (exercise!)
+\begin{itemize}
+    \item $\mathbb{E}[\delta B_i]=0$
+    \item $\text{Var}(\delta B_i) = \delta t$
+    \item $\mathbb{E}[\delta B_i^2]=\delta t$
+    \item $\text{Var}(\delta B_i^2) = 2{(\delta t)}^{2}$\quad
+        (hint: $\mathbb{E}[Z^4]=3$ for $Z\sim N(0,1)$)
+\end{itemize}
+
+\section{Stochastic Calculus}
+
+\subsection{Ito's Formula}
+
+\subsubsection{Ito's Multiplication Rules}
+
+\begin{align*}
+    {(\mathrm{d}t)}^{2} &= 0, \\
+    (\mathrm{d}t)(\mathrm{d}B(t)) &= 0, \\
+    (\mathrm{d}B(t))^2 &= \mathrm{d}t.
+\end{align*}
+
+\subsubsection{Ito's Lemma}
+
+Consider an \textbf{\underline{Ito's process}}
+\[
+    \mathrm{d}X_t = \mu_t\mathrm{d}t + \sigma_t\mathrm{d}B_t,
+\]
+where
+\begin{itemize}
+    \item $\mu_t$ (or just $\mu$): drift process,
+    \item $\sigma_t$ (or just $\sigma$): diffusion process,
+\end{itemize}
+both can be either stochastic or deterministic.
+Using the multiplication rules, we can derive that
+\[
+    {(\mathrm{d}X_t)}^{2}=\mu^2(\mathrm{d}t)^2+\sigma^2(\mathrm{d}B_t)^2
+    +2\mu\sigma(\mathrm{d}t)(\mathrm{d}B_t)=\sigma^2\mathrm{d}t.
+\]
+Let $Z(t)=f(t,X_t)$, then
+\begin{align*}
+    \mathrm{d}Z(t)
+    &= \frac{\partial f}{\partial X_t}\mathrm{d}X_t
+    +\frac{\partial f}{\partial t}\mathrm{d}t
+    +\underbrace{\frac{1}{2}\frac{\partial^2 f}{\partial
+    X_t^2}{(\mathrm{d}X_t)}^{2}}_{\text{It\^{o} correction}} \\
+    &= \left(\frac{\partial f}{\partial t}
+    +\mu\frac{\partial f}{\partial X_t} 
+    +\frac{1}{2}\sigma^2\frac{\partial^2 f}{\partial X_t^2}\right)\mathrm{d}t
+    +\frac{\partial f}{\partial X_t}\sigma\mathrm{d}B(t).
+\end{align*}
+
+\subsubsection{Examples}
+
+\begin{enumerate}
+    \item $\mathrm{d}X_t=\mathrm{d}W_t$, $f(t,x)=te^{\alpha x}$.
+        Since
+        \[
+            \frac{\partial f}{\partial t}=e^{\alpha x},\quad
+            \frac{\partial f}{\partial x}=\alpha te^{\alpha x},\quad
+            \frac{\partial^2 f}{\partial x^2}=\alpha^2te^{\alpha x},
+        \]
+        and in this case $\mu=0$, $\sigma=1$, we have
+        \[
+            \mathrm{d}f(t,W_t) = 
+            \left(e^{\alpha x}+
+            +\frac{1}{2}\alpha^2te^{\alpha W_t}\right)\mathrm{d}t
+            +\alpha te^{\alpha W_t}\mathrm{d}W_t
+        \]
+
+    \item $\mathrm{d}X=\mathrm{d}W$, $f(x)=x^2$.
+        \begin{align*}
+            \mathrm{d}f(t,W_t)
+            &= \frac{\partial f}{\partial t}\mathrm{d}t
+            +\frac{\partial f}{\partial x}\mathrm{d}x
+            +\frac{1}{2}\frac{\partial^2 f}{\partial x^2}\mathrm{d}x \\
+            &= 0 + 2W\mathrm{d}W + \frac{1}{2}2\mathrm{d}t \\
+            &= \mathrm{d}t+2W_t\mathrm{d}W_t
+        \end{align*}
+
+    \item Compute $\mathbb{E}\left[B_t^4\right]$. This could be transformed to
+        the question
+        \[
+            \mathrm{d}X_t=\mathrm{d}B_t,\quad
+            Z_t=X_t^4.
+        \]
+        Thus,
+        \[
+            \mathrm{d}Z_t=6B_t^2\mathrm{d}t+4B_t^3\mathrm{d}B_t,
+        \]
+        i.e.\
+        \[
+            Z_t=Z_0 + 6 \int_{0}^{t}B_s^2\mathrm{d}s
+            + 4 \int_{0}^{t} B_s^3\mathrm{d}B_s
+        \]
+        so
+        \begin{align*}
+            \mathbb{E}[B_t^4]=\mathbb{E}Z_t
+            &= 0 + 6 \int_{0}^{t} \mathbb{E}[B_s^2]\mathrm{d}s
+            + 4 \int_{0}^{t} \mathbb{E}[B_s^3]\mathrm{d}B_s \\
+            &= 6 \int_{0}^{t}s\mathrm{d}s + 0 \\
+            &= 3t^2
+        \end{align*}
+\end{enumerate}
 
 
 \end{document}
