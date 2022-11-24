@@ -693,7 +693,7 @@ Let $Z(t)=f(t,X_t)$, then
             \mathrm{d}f(t,W_t)
             &= \frac{\partial f}{\partial t}\mathrm{d}t
             +\frac{\partial f}{\partial x}\mathrm{d}x
-            +\frac{1}{2}\frac{\partial^2 f}{\partial x^2}\mathrm{d}x \\
+            +\frac{1}{2}\frac{\partial^2 f}{\partial x^2}\mathrm{d}t \\
             &= 0 + 2W\mathrm{d}W + \frac{1}{2}2\mathrm{d}t \\
             &= \mathrm{d}t+2W_t\mathrm{d}W_t
         \end{align*}
@@ -722,6 +722,162 @@ Let $Z(t)=f(t,X_t)$, then
             &= 3t^2
         \end{align*}
 \end{enumerate}
+
+\subsection{Stochastic Differential Equation}
+
+\paragraph{Example}
+Given that
+\[
+    \mathrm{d}S(t)=\mathrm{d}B(t),\quad
+    u(t,x)=y_0e^{\mu t + \sigma x},
+\]
+and
+\[
+    Y(t) = u(t, S),\quad
+    Y(0)=y_0,
+\]
+we have
+\begin{align*}
+    \mathrm{d}Y_t
+    &=\mu u(t,S)\mathrm{d}t+\sigma u(t,s)\mathrm{d}B
+    +\frac{1}{2}\sigma^2 u(t,s)\mathrm{d}t \\
+    &=\left(\mu+\frac{1}{2}\sigma^2\right)Y(t)\mathrm{d}t
+    +\sigma Y(t)\mathrm{d}B_t.
+\end{align*}
+This gives hint on how to solve
+\[
+    \mathrm{d}Y(t)=\mu Y(t)\mathrm{d}t+\frac{1}{2}\sigma Y(t)\mathrm{d}B_t,
+\]
+whose solution is
+\[
+    Y(t)=u(t,B_t)
+    =y(0)e^{\left(\mu - \frac{1}{2}\sigma^2\right)t+\sigma B_t}.
+\]
+This can be solved with a change of variable
+\[
+    Z(t)=\ln Y(t).
+\]
+Applying Ito's lemma, we can derive that
+\begin{align*}
+    \mathrm{d}Z(t)
+    &=\frac{1}{Y(t)}\mathrm{d}Y(t)-\frac{1}{2}\frac{1}{Y(t)^2}\sigma^2Y(t)^2\mathrm{d}t\\
+    &=\mu\mathrm{d}t+\sigma\mathrm{d}B(t)-\frac{1}{2}\sigma^2\mathrm{d}t \\
+    &=\left(\mu-\frac{1}{2}\sigma^2\right)\mathrm{d}t+\sigma\mathrm{d}B_t
+\end{align*}
+Integrating both sides from 0 to $t$, we get
+\[
+    Z(t)-Z(0)=\ln{\frac{Y(t)}{Y(0)}}
+    =\left(\mu-\frac{1}{2}\sigma^2\right)t+\sigma B_t
+\]
+leading to the solution.
+
+
+\subsection{SDE \& PDE}
+
+Consider the SDE
+\begin{align*}
+    \mathrm{d}X_s
+    &= \mu(s,X_s)\mathrm{d}s+\sigma(s,B_s)\mathrm{d}B_s,\\
+    X_t &= x,
+\end{align*}
+which starts at $x$ at time $t$ and evolves in the interval $\left[t,T\right]$.
+Now the parabolic PDE
+\begin{align*}
+    \frac{\partial F}{\partial t}+\mu(t,x)\frac{\partial F}{\partial x}
+    +\frac{1}{2}\sigma^2(t,x)\frac{\partial^2 F}{\partial x^2}
+    =\frac{\partial F}{\partial t}+\mathcal{A}F=0 \\
+    F(T,x) = \phi(x),
+\end{align*}
+where
+\[
+    \mathcal{A}=\mu(t,x)\frac{\partial}{\partial
+    x}+\frac{1}{2}\sigma^2(t,x)\frac{\partial^2}{\partial x^2}
+\]
+is called the \emph{infinitesimal operator}.
+Applying Ito's Lemma to $F(s,X(s))$, we have
+\[
+    \mathrm{d}F=\frac{\partial F}{\partial t}\mathrm{d}t
+    +\frac{\partial F}{\partial X}\mathrm{d}X
+    +\frac{1}{2}\sigma^2\frac{\partial^2 f}{\partial X^2}\mathrm{d}t.
+\]
+Integrate from $t$ to $T$, we get
+\begin{align*}
+    &F(T,X_T)-F(t,X_t)\\
+    =&\int_{t}^{T}\underbrace{\left[\frac{\partial F(s,X_s)}{\partial t}
+    +\frac{\partial F(s,X_s)}{\partial X}\mu(s,X_s)
+    +\frac{1}{2}\sigma^2\frac{\partial^2 F(s,X_s)}{\partial X^2}
+    \right]}_{\text{exactly the PDE, $=0$}}\mathrm{d}s\\
+     &+\int_{t}^{T}\sigma(s,X_s)\frac{\partial F(s,X_s)}{\partial
+     X}\mathrm{d}W_s \\
+    =&\int_{t}^{T}\left[\frac{\partial F(s,X_s)}{\partial
+    t}+\mathcal{A}F(s,X_s)\right]\mathrm{d}s+\int_{t}^{T}
+    \sigma(s,X_s)\frac{\partial F(s,X_s)}{\partial X}\mathrm{d}W_s\\
+    =&\int_{t}^{T}\sigma(s,X_s)\frac{\partial F(s,X_s)}{\partial
+    X}\mathrm{d}W_s,
+\end{align*}
+\[
+    \Longrightarrow\quad
+    \phi(X_T)-F(t,X)=\int_{t}^{T}\sigma(s,X_s)\frac{\partial F(s,X_s)}{\partial
+    X}\mathrm{d}W_s
+\]
+Taking expectation on both sides (conditional on $t$),
+\[
+    \mathbb{E}\phi(X_T)-\mathbb{E}[F(t,X(t))|X(t)=x]
+    =\mathbb{E}\left[\int_{t}^{T}\sigma(s,X_s)\frac{\partial F(s,X_s)}{\partial
+    X}\mathrm{d}W_s|X(t)=x\right].
+\]
+Since stochastic integral has 0 expectation, i.e.\
+\[
+    F(t,X)=\mathbb{E}\left[\phi(X_T)|X(t)=x\right]
+\]
+The above conclusion is the \textbf{\underline{Feynman Kac Theorem}}
+
+\newmdtheoremenv[style=defEnv]{feynman kac}[theorem]{Proposition}
+\begin{feynman kac}
+    If $F$ is a solution to
+    \[
+        \frac{\partial F}{\partial t}+\mathcal{A}F=0,\quad
+        F(T,X)=\phi(X),
+    \]
+    where $\mathcal{A}$ is the infinitesimal operator associated with the SDE
+    \[
+        \mathrm{d}X_s=\mu(s,X_s)\mathrm{d}s+\sigma(s,X_s)\mathrm{d}W_s,\quad
+        X_t=x
+    \]
+    then
+    \[
+        F(t,x)=\mathbb{E}\left[\phi(X_T)|X_t=x\right]
+    \]
+\end{feynman kac}
+\paragraph{Note} By ``associated'' means that the quantity $\mu$ and $\sigma$
+are the same in both SDE and PDE.
+
+\newtheorem{feynman kac eg}[theorem]{Example}
+\begin{feynman kac eg}
+    Solve the PDE
+    \[
+        \frac{\partial F}{\partial t}+\frac{1}{2}\sigma^2\frac{\partial^2
+        F(t,x)}{\partial x^2}=0,\quad
+        F(T,x)=x^2
+    \]
+    using the Feynman Kac formula. Let
+    \[
+        \mathrm{d}X_s=\sigma\mathrm{d}W_s,\quad X_t=x
+    \]
+    The solution to the SDE is
+    \[
+        X_t=x+\sigma\left[W_T-W_t\right]
+    \]
+    implying that $X_T\sim N(x,\sigma^2(T-t))$.
+    So
+    \[
+        F(t,x)
+        =\mathbb{E}X_T^2
+        =\sigma^2(T-t)+x^2.
+    \]
+\end{feynman kac eg}
+
+
 
 
 \end{document}
