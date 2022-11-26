@@ -877,6 +877,146 @@ are the same in both SDE and PDE.
     \]
 \end{feynman kac eg}
 
+\section{Arbitrage Pricing}
+
+\subsection{Definitions}
+
+\begin{itemize}
+    \item \textbf{\underline{out-of-the-money (OTM)}} for a call means
+        $S(t)-K<0$.
+    \item \textbf{\underline{in-the-money}} for a call means $S(t)-K > 0$.
+    \item \textbf{\underline{at-the-money}} for a call means $S(t)=K$.
+    \item \textbf{\underline{Exotic options}}: more complicated products that
+        have ``exotic'' features, e.g. early exercise, multiple strikes, etc.
+\end{itemize}
+
+\subsection{The Black \& Scholes Model and Arbitrage}
+
+\subsubsection{Model Introduction}
+
+The model is based on:
+\begin{enumerate}
+    \item risk-free bank (letter $B$ stands for bank): 
+        \[
+            \mathrm{d}B(t)=rB(t)\mathrm{d}t\quad\Rightarrow\quad
+            B(t)=B(0)e^{rt}
+        \]
+    \item stock:
+        \[
+            \mathrm{d}S(t)=\mu S(t)\mathrm{d}t+\sigma S(t)\mathrm{d}W(t),\quad
+            S(0)=s(0)
+        \]
+        \[
+            \Rightarrow\quad
+            S(t)=S(0)e^{\left(\mu-\frac{1}{2}\sigma^2\right)t+\sigma W_t}
+        \]
+    \item option, that depends on stock price and the current time:
+        \[
+            V(t,S).
+        \]
+\end{enumerate}
+
+\subsubsection{The PDE approach of pricing}
+
+The model:
+\[
+    \mathrm{d}B_t=rB_t\mathrm{d}t,\quad
+    \mathrm{d}S_t=\mu S_t\mathrm{d}t+\sigma S_t\mathrm{d}W_t
+\]
+Applying Ito's lemma on $V(t,S)$, we have
+\begin{align*}
+    \mathrm{d}V
+    &=\frac{\partial V}{\partial t}\mathrm{d}t
+    +\frac{\partial V}{\partial S}\mathrm{d}S
+    +\frac{1}{2}\frac{\partial^2 V}{\partial S^2}{(\mathrm{d}S)}^{2}\\
+    &=\left[\frac{\partial V}{\partial t}+\mu S\frac{\partial V}{\partial S}
+    +\frac{1}{2}\sigma^2S^2\frac{\partial^2 V}{\partial S^2}\right]\mathrm{d}t
+    +\sigma S\frac{\partial V}{\partial S}\mathrm{d}W_t.
+\end{align*}
+Consider a portfolio $P(t)$ with $\Delta$ stocks and one short option
+(\textbf{\underline{Delta hedging}}).
+The value of the portfolio is
+\[
+    P(t)=\underbrace{\Delta S(t)}_{\text{long the stock}}-
+    \underbrace{V(t)}_{\text{short the option}}
+\]
+The portfolio evolves according to
+\begin{align*}
+    \mathrm{d}P(t)
+    &=\Delta\mathrm{d}S(t)-\mathrm{d}V\\
+    &=\left[\Delta\mu S-\frac{\partial V}{\partial t}-\mu S\frac{\partial
+    V}{\partial S}-\frac{1}{2}\sigma^2S^2\frac{\partial^2V}{\partial S^2}\right]
+    \mathrm{d}t+\left[\Delta\sigma S-\sigma S\frac{\partial V}{\partial
+    S}\right]\mathrm{d}W_t.
+\end{align*}
+If we let $\Delta=\frac{\partial V}{\partial S}$,
+because if the market has no arbitrage then its return must equal
+$rP\mathrm{d}t$, 
+we are left with
+\[
+    \mathrm{d}P=\left[\Delta\mu S-\frac{\partial V}{\partial t}-\mu S\frac{\partial
+    V}{\partial S}-\frac{1}{2}\sigma^2S^2\frac{\partial^2V}{\partial S^2}\right]
+    \mathrm{d}t
+    =rP\mathrm{d}t
+\]
+\[
+    \Rightarrow\quad
+    \Delta\mu S-\frac{\partial V}{\partial t}-\mu S\frac{\partial
+    V}{\partial S}-\frac{1}{2}\sigma^2S^2\frac{\partial^2V}{\partial S^2}\right]
+    =rP
+\]
+Since $P=\frac{\partial V}{\partial S}S-V, \Delta=\frac{\partial V}{\partial
+S}$, after these substitution, we obtain the following second-order parabolic
+PDE called the \textbf{\underline{Black \& Scholes Equation (BSE)}}:
+\[
+    \frac{1}{2}\sigma^2S^2\frac{\partial^2 V}{\partial S^2}+rS\frac{\partial
+    V}{\partial S}+\frac{\partial V}{\partial t}=rV,\quad
+    V(T,S)=\text{max}(S-K,0),
+\]
+where the second equation is the boundary condition for European call option.
+
+\paragraph{Hedge Parameters}
+The following parameters (appearing in the PDE) are the sensitivities of the
+option value w.r.t. small changes in the problem.
+
+\begin{itemize}
+    \item 
+        \[
+            \Delta=\frac{\partial V}{\partial S}
+        \]
+        It tells the trader how to balance the portfolio so that it is always
+        equal to the option.
+    \item 
+        \[
+            \Gamma=\frac{\partial^2 V}{\partial S^2}
+        \]
+        It gives an indication of how stable the hedging portfolio is. If
+        $\Gamma$ is large, the trader needs to rebalance more often.
+    \item
+        \[
+            \theta=\frac{\partial V}{\partial t}
+        \]
+        If $S$ stays constant then the value of the option will change by
+        $\theta$
+    \item
+        \[
+            \zeta=\frac{\partial V}{\partial \sigma}
+        \]
+        It measures the change in price w.r.t. volatility
+    \item
+        \[
+            \rho=\frac{\partial V}{\partial r}
+        \]
+        It measures sensitivity w.r.t. interest rate.
+\end{itemize}
+
+\subsubsection{The Martingale Method of Pricing}
+
+Remember!
+\[
+    V(0)=\mathbb{E}^{\hat{P}}\left[e^{-rT}V(T,S)\right].
+\]
+
 
 
 
