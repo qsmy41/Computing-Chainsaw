@@ -1151,8 +1151,213 @@ Monitoring the P\&L of the hedging portfolio
 \[
     \pi(t,s)=V(t,s)-\Delta S(t).
 \]
+If $\pi(t,S)$ is not small, then it means that some element of the model is not
+performing well i.e.\ the value of the option is changing well beyond the
+$\Delta$ parameter predicts. There will be several parameters deployed:
+$\pmb{\theta}=\left(\theta_1,\ldots,\theta_N\right)$, so 
+\[
+    V(t,s,\pmb{\theta})
+\]
+With Monte Carlo, we can use \emph{finite difference} to calculate the Greeks.
+
+\subsubsection{Finite Difference}
+
+For convenience, we consider a single parameter $\theta$.
+We know that by a Taylor series expansion,
+\[
+    V(\theta+\Delta\theta)=V(\theta)+\frac{\partial V}{\partial
+    \theta}\Delta\theta
+    +\frac{1}{2}\frac{\partial^2V}{\partial \theta^2}\Delta\theta^2+\cdots
+\]
+therefore
+\begin{align*}
+    \frac{\partial V}{\partial \theta}
+    &=\frac{V(\theta+\Delta\theta)-V(\theta)}{\Delta\theta}
+    -\frac{1}{2}\frac{\partial^2V}{\partial
+    \theta^2}\Delta\theta+O(\Delta\theta^2)\\
+    &\approx
+    \frac{\overline{V}_N(\theta+\Delta\theta)-\overline{V}_N(\theta)}{\Delta\theta},
+\end{align*}
+where
+\[
+    \overline{V}_N(\theta)=\frac{1}{N}\sum_{i=1}^{N}\frac{1}{M(T)}V(T,S^i,\theta),
+\]
+and $M(T)$ is the discount factor, e.g. $M(T)=e^{r(T-t_0)}$.
+Since $\mathbb{E}\overline{V}_N(\theta)=V(\theta)$, the error will be
+$O(\Delta\theta)$.
+
+The above is \textbf{\underline{forward finite difference}}. We could also
+consider \textbf{\underline{central finite difference}}:
+\[
+    \frac{\partial V}{\partial \theta}=
+    \frac{V(\theta+\Delta\theta)-V(\theta-\Delta\theta)}{2\Delta\theta}
+    +O(\Delta\theta^2),
+\]
+where the second derivative error in the Taylor expansion of 
+$V(\theta+\Delta\theta)$ and $V(\theta-\Delta\theta)$ cancels out.
+Thus the error is much less than the forward finite difference.
+
+Central F.D. needs one more simulation $V(\theta-\Delta\theta)$ than forward
+F.D.
 
 
+\section{Numerical Methods for SDEs}
+
+\subsection{Deterministic methods}
+
+We are looking at
+\[
+    \dot{x}=f(t,x),\quad
+    t\ge t_0,\;x(t_0)=x_0,
+\]
+and assume that $f$ satisfies the \textbf{\underline{Lipscitz condition}}:
+\[
+    |f(t,x)-f(t,y)|\le L|x-y|,\quad\forall x,y\in\mathbb{R}, t>t_0,
+\]
+where $L$ is the \textbf{\underline{Lipscitz constant}}.
+
+\subsubsection{Euler's Method}
+
+Given that we know $t_0,f,x(t_0)$, the most elementary approximation is
+\[
+    x(t)=x(t_0)+\int_{t_0}^{t}f(s,x(s))\mathrm{d}s
+    \approx x(t_0)+f(t_0,x(t_0))(t-t_0).
+\]
+Breaking the time interval $\left[t_0,\ldots,T\right]$ into
+$t_0<t_1<t_2<\cdots<t_{N-1}=T$ s.t.
+\[
+    \delta=t_{i+1}-t_i,\quad i=0,1,\ldots,N-1,
+\]
+we arrive at the recursive scheme
+\[
+    x_{n+1}=x_n+f(t_n,x_n)\delta.
+\]
+The following theorem provides the condition where the above recursive scheme
+converges.
+\newmdtheoremenv[style=defEnv]{euler converge L}[theorem]{Theorem}
+\begin{euler converge L}
+    Euler's method is convergent if
+    \[
+        \delta<\frac{1}{L}.
+    \]
+\end{euler converge L}
+Regarding \textbf{\underline{order of convergence}}, we re-write the Euler's
+method as
+\begin{align*}
+    & x(t_{n+1})-[x(t_n)+\delta f(t_n,x(t_n))] \\
+    = & [x(t_n)+\dot{x}(t_n)\delta+O(\delta^2)]-[x(t_n)+\delta f(t_n,x(t_n))] \\
+    = & O(\delta^2),
+\end{align*}
+and we say that the Euler method converges with order 1, i.e.\
+it recovers exactly every polynomial solution of degree 1 or less.
+
+\subsubsection{The Trapezoidal Rule}
+
+Instead of approximating with the left end-point we could just average the two:
+\begin{align*}
+    x(t)
+    &= x(t_n)+\int_{t_n}^{t} f(s,x(s))\mathrm{d}s \\
+    &\approx x(t_n)+\frac{1}{2}(t-t_n)\left[f(t_n,x(t_n))+f(t,x(t))\right],
+\end{align*}
+giving the trapezoidal rule
+\[
+    x_{n+1}=x_n+\frac{1}{2}\delta\left[f(t_n,x_n)+f(t_{n+1},x_{n+1})\right]
+\]
+similarly, using Taylor's expansion and several substituions, we could get
+\[
+    x(t_{n+1})-\left[x(t_n)+\frac{1}{2}\delta f(t_n,x_n(t_n))+f(t_{n+1},x_{n+1})\right]
+    =O(\delta^3),
+\]
+suggesting that the trapezoidal method has a convergence of order 2. We can also
+show that it is convergent. Comparing with the Euler method, it has a superior
+convergence rate but it is implicit, whereas Euler method is explicit.
+
+
+\subsubsection{The Theta method}
+
+Both the Euler and trapezoidal rule fit in the general scheme
+\[
+    x_{n+1}=x_n+\delta\left[\theta
+    f(t_n,x_n)+(1-\theta)f(t_{n+1},x_{n+1})\right],
+\]
+where $\theta=1$ is the Euler's scheme, $\theta=\frac{1}{2}$ is the trapezoidal
+scheme.
+
+\subsection{The Euler-Maruyama (EM) Method}
+
+Given that
+\[
+    \mathrm{d}X(t)=f(X(t))\mathrm{d}t+g(X(t))\mathrm{d}W(t),
+\]
+with $X(0)$ given, $0\le t\le T$, we define a step-size $\delta=\frac{T}{N}$.
+The exact solution is
+\[
+    X(t_{n+1})=X(t_n)+\int_{t_n}^{t_{n+1}}f(X(s))\mathrm{d}s+\int_{t_n}^{t_{n+1}}g(X(s))\mathrm{d}W(s).
+\]
+Assuming $f$ and $g$ are constant in $[t_n,t_{n+1}]$, then
+\[
+    X_{n+1}=X_n+f(X_n)\Delta t + g(X_n)\Delta W_n
+\]
+where $\Delta W_n=W(t_{n+1})-W(t_n)$ is a Brownian motion increment:
+\[
+    \Delta W_n\sim N(0,t_{n+1}-t_n)\sim\sqrt{\delta}N(0,1).
+\]
+The EM algorithm is then like the following:
+\begin{enumerate}
+    \item Fix $\delta$, the stepsize.
+    \item compute iteratively
+        \[
+            X_{n+1}=X_n+f(X_n)\delta + \sqrt{\delta}g(X_n)\xi_n,
+        \]
+        where $\xi_n\sim N(0,1)$.
+\end{enumerate}
+
+\subsubsection{Weak v.s. Strong Convergence}
+
+\textbf{\underline{Weak error}} associated with a discretization scheme is
+\[
+    e^\text{weak}_\delta=\underset{n=0,\ldots,N-1}{\text{max}}
+    |\underbrace{\mathbb{E}[\phi(X_n)]}_{\text{EM
+    approx.}}-\underbrace{\mathbb{E}[\phi(X_{t_n})]}_{\text{exact}}|
+\]
+where $\phi$ is a class of functinos, e.g. polynomials/Lipscitz.
+We say that a method \textbf{\underline{converges weakly}} if
+\[
+    e^\text{weak}_\delta\longrightarrow
+    0\quad\text{as}\quad\delta\longrightarrow 0.
+\]
+We say that the method \textbf{\underline{converges with weak order}} $p$ if
+\[
+    e^\text{weak}_\delta\le K\delta^p\quad
+    \forall 0<\delta\le\delta^*\text{ for some $\delta^*$}.
+\]
+\textbf{\underline{Strong error}} is given by
+\[
+    e^\text{strong}_\delta=\underset{n=0,\ldots,N-1}{\max}\mathbb{E}[
+    |\underbrace{X_n}_{\text{approx.}}-\underbrace{X(t_n)}_{\text{exact}}|]
+\]
+A method \textbf{\underline{converges strongly}} if
+\[
+    e^\text{strong}_\delta\longrightarrow
+    0\quad\text{as}\quad\delta\longrightarrow 0
+\]
+We say that the method \textbf{\underline{converges with strong order}} $p$ if
+\[
+    e^\text{strong}_\delta\le K\Delta t^p\quad
+    \forall 0<\Delta t\le\Delta t^*.
+\]
+
+\subsection{Implicit Methods and Numerical Stability}
+
+In stability analysis, we are interested in long-time behaviourof the numerical
+scheme e.g. if we make small errors then will this error propagate?
+
+\subsubsection{Stochastic $\theta$-method}
+
+\[
+    X_{n+1}=X_n+(1-\theta)f(X_n)\delta+\theta f(X_{n+1})\Delta t+g(X_n)\Delta
+    W_n.
+\]
 
 
 \end{document}
