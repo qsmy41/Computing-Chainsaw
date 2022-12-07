@@ -272,8 +272,8 @@ so the contract function is given by
     \]
     we can obtain the following system of equations by expanding $V_1^h$
     \begin{align*}
-        (1+R)x+xuy&=\Phi(u),\\
-        (1+R)x+xdy&=\Phi(d),
+        (1+R)x+suy&=\Phi(u),\\
+        (1+R)x+sdy&=\Phi(d),
     \end{align*}
     and solve it to find out the replicating portfolio as
     \begin{align*}
@@ -1356,8 +1356,306 @@ scheme e.g. if we make small errors then will this error propagate?
 
 \[
     X_{n+1}=X_n+(1-\theta)f(X_n)\delta+\theta f(X_{n+1})\Delta t+g(X_n)\Delta
-    W_n.
+    W_n,
+\]
+with
+\begin{itemize}
+    \item $\theta = 0 \Rightarrow $ EM,
+    \item $\theta=\frac{1}{2} \Rightarrow$ stochastic trapezoidal,
+    \item $\theta=1 \Rightarrow$ backward (implicit) Euler.
+\end{itemize}
+
+\subsubsection{The Log-Normal Distribution}
+
+We say that $X$ has a log-normal distribution, or $X\sim
+\text{LN}(\mu,\sigma^2)$, if
+\[
+    \log{(X)}\sim N(\mu,\sigma^2).
+\]
+The mean and variance of the log-normal distribution satisfy
+\[
+    \mathbb{E}[X]=\exp{\left(\mu+\frac{\sigma^2}{2}\right)},
+\]
+\[
+    \text{Var}(X)=\exp{\left(2\mu+\sigma^2\right)}\left(\exp{(\sigma^2)}-1\right).
 \]
 
+\subsubsection{Stability Analysis}
+
+Given that
+\[
+    \mathrm{d}X(t)=\mu X(t)\mathrm{d}t+\sigma X(t)\mathrm{d}W(t),\quad
+    X(0)=x_0,
+\]
+we know that
+\[
+    X(t)=X(0)e^{\left(\mu-\frac{1}{2}\sigma^2\right)t+\sigma W_t},
+\]
+we can derive using log-normal distribution that
+\[
+    \mathbb{E}[X(t)^2]=X(0)^2e^{(2\mu+\sigma^2)t},
+\]
+\newmdtheoremenv[style=defEnv]{mean-square stability}[theorem]{Definition}
+\begin{mean-square stability}
+\textbf{\underline{Mean-square stability}} is defined as
+\[
+    \underset{t\rightarrow\infty}{\lim}\mathbb{E}\left[X(t)^2\right]=0\;\iff\;
+    2\mu+\sigma^2<0.
+\]
+\end{mean-square stability}
+\newmdtheoremenv[style=defEnv]{asymptotic stability}[theorem]{Definition}
+\begin{asymptotic stability}
+\textbf{\underline{Asymptotic stability}} is defined as
+\[
+    \underset{t\rightarrow\infty}{\lim}|X(t)|=0 \text{ with probability 1}
+    \;\iff\;
+    (\mu-\frac{1}{2}\sigma^2)t<0.
+\]
+\end{asymptotic stability}
+Since $(\mu+\frac{1}{2}\sigma^2)t<0 \Rightarrow (\mu-\frac{1}{2}\sigma^2)t<0$,
+we can deduce that
+\[
+    \text{mean-square stability}\;\Longrightarrow\;
+    \text{asymptotic stability}.
+\]
+
+\subsubsection{Mean-square Stability of the $\theta$-method}
+
+\newmdtheoremenv[style=defEnv]{mse stability}[theorem]{Definition}
+\begin{mse stability}
+    Let
+    \[
+        X_{n+1}=X_n+\left[(1-\theta)\mu X_n+\theta\mu
+        X_{n+1}\right]\delta+\sqrt{\delta}\sigma X_n\xi_n,
+    \]
+    where $\xi_n\sim N(0,1)$. We have
+    \[
+        \underset{n\rightarrow 0}{\lim}\mathbb{E}X^2_n=0
+        \quad\iff\quad
+        (1-2\theta)\mu\delta<-2\left(\mu+\frac{\sigma^2}{2}\right)
+    \]
+\end{mse stability}
+
+\paragraph{Comments}
+We can show that
+\begin{itemize}
+    \item $0\le\theta<\frac{1}{2}$ for a stable SDE the method has a finite
+        region of stability,
+    \item $\theta=\frac{1}{2}$ SDE stable $\iff$ mean square stable
+        $\forall\delta$,
+    \item $\frac{1}{2}<\theta\le 1$ the method is overstable -- it is stable for
+        a stable SDE and stable even for an unstable SDE.
+\end{itemize}
+
+\section{Asset and Portfolio}
+
+\subsection{Asset Returns}
+
+\begin{itemize}
+    \item \textbf{\underline{Asset}}: investment instrument that can be
+        bought/sold.
+    \item If you buy an asset today at price $X_0$ and sell it in one year at
+        price $X_1$, then the \textbf{\underline{total return}} $R$ on the
+        investment is defined as
+        \[
+            R=\frac{X_1}{X_0}
+        \]
+    \item \textbf{\underline{Rate of return}} is defined as
+        \[
+            r=\frac{X_1-X_0}{X_0}=R-1
+        \]
+    \item The rate of return acts much like an interest rate:
+        \[
+            X_1=(1+r)X_0.
+        \]
+\end{itemize}
+
+\subsection{Portfolio Returns}
+
+\begin{itemize}
+    \item We form a \textbf{\underline{master asset}} or
+        \textbf{\underline{portfolio}} by apportioning an amount $X_0$ among $n$
+        assets, where each amount $X_{0i}$ is such that
+        \[
+            \sum_{i=1}^{n} X_{0i}=X_0.
+        \]
+    \item Alternatively, we could use $w_i$ as the \textbf{\underline{weight}}
+        of asset $i$ in the portfolio
+        \[
+            X_{0i}=w_iX_0
+        \]
+        such that $\sum_{i=1}^{n} w_i=1$.
+    \item Using the above concepts, the total return and rate of return are
+        \[
+            R=\sum_{i=1}^{n} w_iR_i
+            \quad\text{and}\quad
+            r=\sum_{i=1}^{n} w_ir_i
+        \]
+\end{itemize}
+
+\subsection{Variance as a Risk Measure}
+
+\begin{itemize}
+    \item Suppose there are $n$ assets with random rates of return $r_i$,
+        and expected values $\mathbb{E}(r_i)=\overline{r}_i$,
+        where $i\in\left\{1,2,\ldots,n\right\}$.
+    \item The variance of $r_i$ is denoted as $\sigma_i^2$ and the covariance of
+        $r_i$ and $r_j$ is $\sigma_{ij}$ ($\sigma_{ii}=\sigma_i^2$).
+    \item The expected return of a portfolio is given by
+        \[
+            \overline{r}=\mathbb{E}(r)=\mathbb{E}\left(\sum_{i=1}^{n}w_ir_i\right)
+            =\sum_{i=1}^{n}w_i\mathbb{E}(r_i)
+            =\sum_{i=1}^{n}w_i \overline{r}_i.
+        \]
+    \item The variance of the return of the portfolio is given by
+        \begin{align*}
+            \sigma^2
+            &= \text{Var}(r) \\
+            &= \mathbb{E}[{(r-\overline{r})}^{2}] \\
+            &= \mathbb{E}\left[{\left(\sum_{i=1}^{n}w_ir_i-\sum_{i=1}^{n}w_i
+            \overline{r}_i\right)}^{2}\right] \\
+            &= \mathbb{E}\left[\left(\sum_{i=1}^{n}w_i(r_i-\overline{r}_i)\right)
+            \left(\sum_{j=1}^{n}w_j(r_j-\overline{r}_j)\right)\right] \\
+            &= \mathbb{E}\left[\sum_{i,j=1}^{n}w_iw_j(r_i-\overline{r}_i)(r_j-\overline{r}_j)\right] \\
+            &= \sum_{i,j=1}^{n}w_i\sigma_{ij}w_j.
+        \end{align*}
+    \item \textbf{Example}: If the portfolio has $w_1=\alpha$ and
+        $w_2=1-\alpha$,
+        \[
+            \overline{r}_p=\alpha \overline{r}_1+(1-\alpha)\overline{r}_2,
+        \]
+        \[
+            \sigma^2_p=\alpha^2\sigma^2_1+2\alpha(1-\alpha)\sigma_{12}+(1-\alpha)^2\sigma_2^2.
+        \]
+\end{itemize}
+
+\subsection{Mean-variance diagrams}
+
+\begin{itemize}
+    \item \textbf{\underline{Minimum variance set}}: 
+        the left boundary of the feasible set.
+    \item \textbf{\underline{Minimum variance point}}: The point with lowest
+        possible variance. It is obtained by minimizing the risk/variance for
+        any given mean return.
+    \item \textbf{\underline{Efficient frontier}}: the upper half of the minimum
+        variance set, of investors' interest.
+\end{itemize}
+
+\subsection{The Markowitz Model}
+
+The \textbf{\underline{Markowitz Model}} is defined as an optimization problem as
+\begin{align*}
+    \text{minimize}\quad & \frac{1}{2}\sum_{i,j=1}^{n}w_i\sigma_{ij}w_j \\
+    \text{subject to}\quad & \sum_{i=1}^{n}w_i
+    \overline{r}_i=\overline{r}_p, \\
+                      & \sum_{i=1}^{n}w_i=1.
+\end{align*}
+To solve this, we can form the \textbf{\underline{Lagrangian function}} $L$
+given by
+\[
+    L=\frac{1}{2}\sum_{i,j=1}^{n}w_i\sigma_{ij}w_j
+    -\lambda\left(\sum_{i=1}^{n}w_i \overline{r}_i-\overline{r}_p\right)
+    -\mu\left(\sum_{i=1}^{n}w_i-1\right),
+\]
+and form the following system of equations:
+\[
+    \left\{
+    \begin{align*}
+        &\nabla_wL=\sum_{j=1}^{n}\sigma_{ij}w_j-\lambda \overline{r}_i-\mu=0, \\
+        &\nabla_\lambda L=\sum_{i=1}^{n}w_i \overline{r}_i-\overline{r}_p=0 \\
+        &\nabla_\mu L=\sum_{i=1}^{n}w_i-1=0.
+    \end{align*}
+    \right.
+\]
+Equivalently, using the vector notation, we have the problem as
+\begin{align*}
+    \text{minimize}\quad & \frac{1}{2}\mathbf{w}^T\Sigma\mathbf{w} \\
+    \text{subject to}\quad & \mathbf{w}^T\overline{\mathbf{r}}-\overline{r}_p=0, \\
+                      & \mathbf{w}^T\mathbf{e}-1=0.
+\end{align*}
+The associated Lagrangian function is
+\[
+    L(\mathbf{w},\lambda,\mu)=\frac{1}{2}\mathbf{w}^T\Sigma\mathbf{w}
+    -\lambda(\mathbf{w}^T\overline{\mathbf{r}}-\overline{r}_p)
+    -\mu(\mathbf{w}^T\mathbf{e}-1),
+\]
+and the optimality conditions become
+\[
+    \left\{
+    \begin{align*}
+        &\nabla_wL=\Sigma\mathbf{w}-\lambda
+        \overline{\mathbf{r}}-\mu\mathbf{e}=\mathbf{0}, \\
+        &\nabla_\lambda L=\mathbf{w}^T\overline{\mathbf{r}}-\overline{r}_p=0, \\
+        &\nabla_\mu L=\mathbf{w}^T\mathbf{e}-1=0,
+    \end{align*}
+    \right.
+\]
+which could be written in one vector equation
+\[
+    \begin{pmatrix}
+        \Sigma & -\overline{\mathbf{r}} & -\mathbf{e} \\
+        -\overline{\mathbf{r}}^T & 0 & 0 \\
+        -\mathbf{e}^T & 0 & 0
+    \end{pmatrix} 
+    \begin{pmatrix}
+        \mathbf{w} \\
+        \lambda \\
+        \mu
+    \end{pmatrix} 
+    =
+    \begin{pmatrix}
+        \mathbf{0} \\
+        -\overline{r}_p \\
+        -1
+    \end{pmatrix},
+\]
+which then the solution can be derived as
+\[
+    \begin{pmatrix}
+        \mathbf{w} \\
+        \lambda \\
+        \mu
+    \end{pmatrix} 
+    =
+    \begin{pmatrix}
+        \Sigma & -\overline{\mathbf{r}} & -\mathbf{e} \\
+        -\overline{\mathbf{r}}^T & 0 & 0 \\
+        -\mathbf{e}^T & 0 & 0
+    \end{pmatrix}^{-1}
+    \begin{pmatrix}
+        \mathbf{0} \\
+        -\overline{r}_p \\
+        -1
+    \end{pmatrix}
+\]
+if $\Sigma$ has \emph{full rank} and $\overline{\mathbf{r}}$ is not a multiple
+of $\mathbf{e}$.
+
+
+\subsection{Estimation of mean and variance}
+
+We define the estimator of $\overline{r}$ as
+\[
+    \hat{\overline{r}}=\frac{1}{n}\sum_{i=1}^{n}r_i,
+\]
+and we can see that
+\begin{align*}
+    &\mathbb{E}(\hat{\overline{r}})=\mathbb{E}\left(\frac{1}{n}\sum_{i=1}^{n}r_i\right)=\overline{r}, \\
+    &\text{var}(\hat{\overline{r}})=\mathbb{E}\left[{(\hat{\overline{r}}-\overline{r})}^{2}\right]
+    =\mathbb{E}\left[\frac{1}{n}\sum_{i=1}^{n}(r_i-\overline{r})\right]^2=\frac{1}{n}\sigma^2.
+\end{align*}
+so $\hat{\overline{r}}$ is an unbiased estimator of $\overline{r}$.
+With some calculation, we can see that
+\[
+    \hat{\sigma}^2=\frac{1}{n-1}\sum_{i=1}^{n}{(r_i-\hat{\overline{r}})}^{2}
+\]
+is an unbiased estimator of $\sigma^2$, whose variance is
+\[
+    \text{var}(\hat{\sigma}^2)=\frac{2\sigma^4}{n-1}.
+\]
+Similarly, the unbiased estimator of covariance is
+\[
+    \hat{\sigma}_{AB}=\frac{1}{n-1}\sum_{i=1}^{n}(r_{A,i}-\hat{\overline{r}}_A)(r_{B,i}-\hat{\overline{r}}_B).
+\]
 
 \end{document}
